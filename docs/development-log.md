@@ -123,3 +123,76 @@ Resultado:
 ### Considerações
 
 A correção foi aplicada de forma pontual, mantendo o escopo da tarefa e preservando o comportamento esperado dos demais componentes da aplicação.
+
+# 25/07/2026
+
+## Tarefa
+
+Corrigir inconsistência na categoria retornada pela listagem de produtos.
+
+**Issue:** #4 – Corrigir associação incorreta de categorias na listagem de produtos  
+**Branch:** `fix/product-category-mapping`
+
+## Contexto
+
+Durante a validação da API foi identificado que alguns produtos eram retornados com categorias incorretas na listagem de produtos.
+
+Como exemplo, o produto `blue trouser` era associado à categoria `phone`, embora estivesse vinculado a outra categoria no banco de dados.
+
+O comportamento ocorria apenas na listagem (`GET /products`), enquanto a consulta individual de produtos não apresentava a mesma inconsistência.
+
+## Análise
+
+A investigação foi iniciada reproduzindo o problema por meio da execução da listagem de produtos e comparando as categorias retornadas pela API com os registros armazenados no banco de dados.
+
+Inicialmente foi analisado o fluxo responsável pela listagem, passando pelos seguintes componentes:
+
+- `ProductController::getAll()`;
+- `ProductService::getAll()`;
+- Consulta SQL utilizada para recuperar produtos e categorias.
+
+Durante a análise da consulta SQL, foi revisado o relacionamento entre as tabelas `product`, `product_category` e `category`.
+
+Foi observado que a tabela intermediária `product_category` possui os campos `product_id` e `cat_id`, sendo este último responsável por referenciar a categoria do produto.
+
+Entretanto, o `JOIN` utilizado na consulta relacionava a tabela `category` utilizando o campo `product_category.id`, em vez de `product_category.cat_id`.
+
+Como consequência, a associação entre produtos e categorias era realizada utilizando o identificador da tabela intermediária, o que fazia com que alguns produtos fossem associados a categorias incorretas quando os valores dos identificadores não coincidiam.
+
+Durante a investigação também foi observado que o fluxo utilizado pela consulta individual (`GET /products/{id}`) utiliza corretamente o campo `cat_id`, indicando que a inconsistência estava restrita à consulta de listagem.
+
+## Implementação
+
+A consulta SQL do método `ProductService::getAll()` foi ajustada para utilizar o relacionamento correto entre as tabelas.
+
+O trecho:
+
+```sql
+INNER JOIN category c
+    ON c.id = pc.id
+```
+
+foi alterado para:
+
+```sql
+INNER JOIN category c
+    ON c.id = pc.cat_id
+```
+
+A alteração faz com que a categoria seja recuperada a partir da chave estrangeira definida na tabela de relacionamento, respeitando o modelo de dados da aplicação.
+
+## Validação
+
+Após a alteração, a listagem de produtos foi executada novamente e os resultados foram comparados com os registros existentes no banco de dados.
+
+As seguintes validações foram realizadas:
+
+- Os produtos passaram a ser associados às categorias corretas.
+- O produto utilizado para reproduzir o problema (`blue trouser`) passou a retornar sua categoria corretamente.
+- A consulta individual de produtos permaneceu apresentando o mesmo comportamento esperado.
+
+## Considerações
+
+A correção foi aplicada de forma pontual, restringindo-se ao relacionamento utilizado pela consulta de listagem.
+
+Durante a investigação foi identificada uma possível inconsistência adicional no filtro por empresa utilizado pelo método `ProductService::getAll()`. Como essa observação não está relacionada à causa do problema corrigido e não foi validada como defeito, nenhuma alteração foi realizada neste momento, mantendo o escopo da tarefa.
