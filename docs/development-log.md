@@ -363,3 +363,69 @@ Essa correção foi identificada durante a investigação da issue #3 e tratada 
 A alteração foi aplicada no serviço responsável pela regra de negócio, mantendo a lógica de categorização centralizada e evitando correções específicas nos consumidores da informação.
 
 Durante a análise também foi observado que algumas consultas SQL da aplicação utilizam interpolação direta de valores, representando uma oportunidade futura de melhoria relacionada ao uso de parâmetros preparados. Essa alteração não foi realizada por não fazer parte do escopo da correção proposta.
+
+# 26/07/2026
+
+## Tarefa
+
+Corrigir retorno incompleto de categorias na consulta individual de produtos.
+
+**Issue:** #10 – Corrigir retorno de apenas uma categoria na busca individual de produtos  
+**Branch:** `fix/product-multiple-categories`
+
+## Contexto
+
+Durante a validação da API foi identificado que produtos associados a múltiplas categorias retornavam apenas uma categoria na consulta individual (`GET /products/{id}`).
+
+O problema foi reproduzido utilizando o produto `king size bed`, que possuía mais de uma categoria associada na tabela de relacionamento `product_category`, porém a resposta da API apresentava somente a categoria `furniture`.
+
+Esse comportamento indicava que a consulta individual não estava tratando corretamente o relacionamento entre produtos e categorias.
+
+## Análise
+
+A investigação foi iniciada reproduzindo o problema por meio da consulta individual de produtos e comparando os dados retornados pela API com os registros existentes no banco de dados.
+
+Inicialmente foram analisados os componentes envolvidos no fluxo de recuperação de produtos:
+
+- `ProductController::getOne()`;
+- `ProductService::getOne()`;
+- `CategoryService::getProductCategory()`;
+- `CategoryService::getOne()`;
+- Modelo `Product`.
+
+Durante a análise, foi identificado que o relacionamento entre produtos e categorias é realizado por meio da tabela intermediária `product_category`, permitindo que um produto possua múltiplas categorias associadas.
+
+Entretanto, no fluxo da consulta individual, o método `CategoryService::getProductCategory()` retornava múltiplos registros, mas a implementação utilizava o método `fetch()` do PDO, que recuperava apenas o primeiro resultado encontrado.
+
+Como consequência, quando um produto possuía mais de uma categoria associada, somente a primeira categoria retornada pela consulta era atribuída ao produto.
+
+## Implementação
+
+A alteração foi realizada para adequar a entidade `Product` ao relacionamento existente entre produtos e categorias.
+
+A propriedade responsável por armazenar a categoria foi alterada para suportar uma coleção de categorias:
+
+```php
+public array $categories = [];
+```
+O método `setCategory` foi substituído por `setCategories` na classe `Product`, e seu comportamento foi ajustado para realizar a atribuição de uma coleção de categorias.
+
+O fluxo de consulta individual foi ajustado para recuperar todas as categorias associadas ao produto utilizando `fetchAll()`.
+
+A lógica anterior, que considerava apenas uma categoria, foi substituída por uma iteração sobre os registros retornados, permitindo que todas as categorias relacionadas ao produto fossem adicionadas ao objeto.
+
+## Validação
+
+Após a alteração, foram realizadas as seguintes validações:
+
+- O produto utilizado para reproduzir o problema (`king size bed`) passou a retornar todas as categorias associadas.
+- Produtos com apenas uma categoria continuaram retornando corretamente.
+- A suíte de testes unitários foi executada após a atualização dos testes da entidade `Product`.
+- O comportamento esperado da consulta individual de produtos foi mantido.
+
+## Considerações
+
+A correção foi aplicada mantendo o escopo da issue, alterando apenas o fluxo responsável pela recuperação das categorias na consulta individual de produtos.
+
+Durante a alteração do modelo `Product`, os testes unitários existentes foram atualizados para refletir o novo comportamento da entidade, substituindo a validação de uma única categoria pela validação de uma coleção de categorias.
+
