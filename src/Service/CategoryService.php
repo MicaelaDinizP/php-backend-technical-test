@@ -13,36 +13,42 @@ class CategoryService
     }
 
     public function getAll($adminUserId)
-    {
-        $query = "
-            SELECT *
-            FROM category c
-            WHERE c.company_id = {$this->getCompanyFromAdminUser($adminUserId)}
-        ";
+{
+    $query = "
+        SELECT *
+        FROM category c
+        WHERE (
+            c.company_id = {$this->getCompanyFromAdminUser($adminUserId)}
+            OR c.company_id IS NULL
+        )
+    ";
 
-        $stm = $this->pdo->prepare($query);
+    $stm = $this->pdo->prepare($query);
 
-        $stm->execute();
+    $stm->execute();
 
-        return $stm;
-    }
+    return $stm;
+}
 
-    public function getOne($adminUserId, $categoryId)
-    {
-        $query = "
-            SELECT *
-            FROM category c
-            WHERE c.active = 1
-            AND c.company_id = {$this->getCompanyFromAdminUser($adminUserId)}
-            AND c.id = {$categoryId}
-        ";
+  public function getOne($adminUserId, $categoryId)
+{
+    $query = "
+        SELECT *
+        FROM category c
+        WHERE c.active = 1
+        AND c.id = {$categoryId}
+        AND (
+            c.company_id = {$this->getCompanyFromAdminUser($adminUserId)}
+            OR c.company_id IS NULL
+        )
+    ";
 
-        $stm = $this->pdo->prepare($query);
+    $stm = $this->pdo->prepare($query);
 
-        $stm->execute();
+    $stm->execute();
 
-        return $stm;
-    }
+    return $stm;
+}
 
     public function getProductCategory($productId)
     {

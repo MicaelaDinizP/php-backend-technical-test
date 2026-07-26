@@ -196,3 +196,170 @@ As seguintes validações foram realizadas:
 A correção foi aplicada de forma pontual, restringindo-se ao relacionamento utilizado pela consulta de listagem.
 
 Durante a investigação foi identificada uma possível inconsistência adicional no filtro por empresa utilizado pelo método `ProductService::getAll()`. Como essa observação não está relacionada à causa do problema corrigido e não foi validada como defeito, nenhuma alteração foi realizada neste momento, mantendo o escopo da tarefa.
+
+# 26/07/2026
+
+## Tarefa
+
+Corrigir categoria não retornada na consulta individual de produtos.
+
+**Issue:** #7 – Corrigir categoria `null` na busca individual de produtos  
+**Branch:** `fix/product-category-null`
+
+## Contexto
+
+Durante a validação da API foi identificado que alguns produtos retornavam a categoria como `null` ao serem consultados individualmente.
+
+O problema foi reproduzido utilizando o produto `iphone 8`, que apresentava categoria corretamente na listagem de produtos (`GET /products`), porém retornava categoria ausente na consulta individual (`GET /products/{id}`).
+
+Esse comportamento indicava uma inconsistência entre os fluxos responsáveis pela recuperação das categorias.
+
+## Análise
+
+A investigação foi iniciada reproduzindo o problema por meio das rotas de consulta de produtos e comparando os dados retornados pela API com os registros existentes no banco de dados.
+
+Inicialmente foram analisados os fluxos responsáveis pelas duas consultas:
+
+- `ProductController::getAll()`;
+- `ProductService::getAll()`;
+- `ProductController::getOne()`;
+- `CategoryService::getProductCategory()`;
+- `CategoryService::getOne()`.
+
+Durante a análise, foi identificado que a listagem de produtos recuperava a categoria diretamente por meio de um `JOIN` entre as tabelas `product_category` e `category`, sem aplicar filtros relacionados à empresa da categoria.
+
+Já a consulta individual realizava uma segunda busca utilizando o método `CategoryService::getOne()`, que aplicava o filtro:
+
+```sql
+c.company_id = <empresa do administrador>
+
+Ao analisar os dados do banco e a documentação do projeto, foi identificado que algumas categorias possuem `company_id` nulo por representarem categorias padrão do sistema.
+
+A documentação especifica que as categorias padrão (`clothing`, `phone`, `computer` e `house`) devem estar disponíveis para todas as empresas.
+
+Como consequência, categorias globais não eram encontradas pela consulta individual, fazendo com que produtos associados a essas categorias retornassem `category` como `null`.
+
+## Implementação
+
+A alteração foi realizada no serviço responsável pela recuperação das categorias (`CategoryService`).
+
+Os métodos:
+
+- `getAll()`;
+- `getOne()`;
+
+foram ajustados para considerar tanto categorias específicas de uma empresa quanto categorias padrão compartilhadas entre todas as empresas.
+
+O filtro:
+
+```sql
+c.company_id = <empresa>
+```
+
+foi ajustado para contemplar também categorias globais:
+
+```sql
+(
+    c.company_id = <empresa>
+    OR c.company_id IS NULL
+)
+```
+
+Essa alteração mantém a separação entre categorias personalizadas de empresas e categorias padrão do sistema.
+
+## Validação
+
+Após a alteração, foram realizadas as seguintes validações:
+
+- A listagem de categorias passou a retornar categorias padrão e categorias específicas da empresa.
+- O produto utilizado para reproduzir o problema (`iphone 8`) passou a retornar corretamente sua categoria na consulta individual.
+- Produtos vinculados a categorias específicas da empresa continuaram funcionando normalmente.
+- A consulta de listagem de produtos manteve o comportamento esperado.
+
+## Considerações
+
+Durante a investigação foi identificada uma inconsistência entre a implementação da regra de categorias e a documentação do sistema.
+
+A correção foi aplicada no serviço responsável pela regra de negócio, evitando alterações específicas no fluxo de produtos e garantindo que os diferentes endpoints utilizem o mesmo critério de recuperação de categorias.
+
+Também foi observado que a aplicação possui consultas SQL com interpolação direta de valores, o que pode representar uma oportunidade futura de melhoria relacionada ao uso de parâmetros preparados. Essa alteração não foi realizada por não fazer parte do escopo da correção proposta.
+
+# 26/07/2026
+
+## Tarefa
+
+Corrigir ausência de categorias padrão na listagem de categorias.
+
+**Issue:** #8 – Corrigir ausência de categorias padrão na listagem de categorias  
+**Branch:** `fix/category-global-filter`
+
+## Contexto
+
+Durante a investigação da issue #7, relacionada ao retorno de categoria `null` na consulta individual de produtos, foi identificada uma inconsistência adicional no fluxo de recuperação de categorias.
+
+Ao validar a regra de negócio descrita na documentação do projeto, foi observado que as categorias padrão do sistema (`clothing`, `phone`, `computer` e `house`) devem estar disponíveis para todas as empresas.
+
+Entretanto, a listagem de categorias (`GET /categories`) retornava apenas categorias vinculadas diretamente à empresa do usuário administrador, não incluindo categorias padrão com `company_id` nulo.
+
+Esse comportamento fazia com que a resposta da API não representasse corretamente a regra de compartilhamento das categorias padrão entre empresas.
+
+## Análise
+
+A investigação foi iniciada reproduzindo o comportamento da rota de listagem de categorias e comparando os dados retornados pela API com os registros existentes no banco de dados.
+
+Inicialmente foram analisados os seguintes componentes:
+
+- `CategoryController::getAll()`;
+- `CategoryService::getAll()`;
+- Estrutura da tabela `category`.
+
+Durante a análise, foi identificado que a consulta utilizada pelo método `CategoryService::getAll()` aplicava apenas o filtro:
+
+```sql
+c.company_id = <empresa do administrador>
+```
+Esse filtro retornava somente categorias personalizadas associadas à empresa, ignorando categorias padrão do sistema, identificadas por possuírem `company_id` nulo.
+
+A documentação do projeto define que essas categorias padrão devem ser exibidas para todas as empresas. Portanto, a consulta existente não estava implementando completamente a regra de negócio esperada.
+
+Também foi validado que o filtro por empresa deveria ser mantido para impedir que categorias personalizadas de outras empresas fossem retornadas indevidamente.
+
+## Implementação
+
+A alteração foi realizada no método `getAll()` do `CategoryService`.
+
+O filtro existente:
+
+```sql
+c.company_id = <empresa>
+```
+foi ajustado para considerar também categorias padrão:
+
+```sql
+c.company_id = <empresa>
+OR c.company_id IS NULL
+```
+Com essa alteração, a consulta passou a retornar:
+
+- Categorias padrão compartilhadas entre empresas.
+- Categorias personalizadas pertencentes à empresa do usuário administrador.
+
+Categorias personalizadas de outras empresas continuam sendo filtradas corretamente.
+
+## Validação
+
+Após a alteração, foram realizadas as seguintes validações:
+
+- A rota de listagem de categorias passou a retornar categorias padrão do sistema.
+- As categorias personalizadas da empresa continuaram sendo retornadas corretamente.
+- Categorias pertencentes a outras empresas não foram incluídas indevidamente na resposta.
+- O comportamento da consulta individual de categorias permaneceu preservado.
+- Os testes existentes foram executados para garantir que a alteração não causou regressões.
+
+## Considerações
+
+Essa correção foi identificada durante a investigação da issue #3 e tratada separadamente por representar um comportamento incorreto próprio da listagem de categorias.
+
+A alteração foi aplicada no serviço responsável pela regra de negócio, mantendo a lógica de categorização centralizada e evitando correções específicas nos consumidores da informação.
+
+Durante a análise também foi observado que algumas consultas SQL da aplicação utilizam interpolação direta de valores, representando uma oportunidade futura de melhoria relacionada ao uso de parâmetros preparados. Essa alteração não foi realizada por não fazer parte do escopo da correção proposta.
