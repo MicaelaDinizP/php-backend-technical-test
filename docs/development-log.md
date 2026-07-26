@@ -196,3 +196,87 @@ As seguintes validações foram realizadas:
 A correção foi aplicada de forma pontual, restringindo-se ao relacionamento utilizado pela consulta de listagem.
 
 Durante a investigação foi identificada uma possível inconsistência adicional no filtro por empresa utilizado pelo método `ProductService::getAll()`. Como essa observação não está relacionada à causa do problema corrigido e não foi validada como defeito, nenhuma alteração foi realizada neste momento, mantendo o escopo da tarefa.
+# 26/07/2026
+
+## Tarefa
+
+Corrigir categoria não retornada na consulta individual de produtos.
+
+**Issue:** #7 – Corrigir categoria `null` na busca individual de produtos  
+**Branch:** `fix/product-category-null`
+
+## Contexto
+
+Durante a validação da API foi identificado que alguns produtos retornavam a categoria como `null` ao serem consultados individualmente.
+
+O problema foi reproduzido utilizando o produto `iphone 8`, que apresentava categoria corretamente na listagem de produtos (`GET /products`), porém retornava categoria ausente na consulta individual (`GET /products/{id}`).
+
+Esse comportamento indicava uma inconsistência entre os fluxos responsáveis pela recuperação das categorias.
+
+## Análise
+
+A investigação foi iniciada reproduzindo o problema por meio das rotas de consulta de produtos e comparando os dados retornados pela API com os registros existentes no banco de dados.
+
+Inicialmente foram analisados os fluxos responsáveis pelas duas consultas:
+
+- `ProductController::getAll()`;
+- `ProductService::getAll()`;
+- `ProductController::getOne()`;
+- `CategoryService::getProductCategory()`;
+- `CategoryService::getOne()`.
+
+Durante a análise, foi identificado que a listagem de produtos recuperava a categoria diretamente por meio de um `JOIN` entre as tabelas `product_category` e `category`, sem aplicar filtros relacionados à empresa da categoria.
+
+Já a consulta individual realizava uma segunda busca utilizando o método `CategoryService::getOne()`, que aplicava o filtro:
+
+```sql
+c.company_id = <empresa do administrador>
+
+Ao analisar os dados do banco e a documentação do projeto, foi identificado que algumas categorias possuem `company_id` nulo por representarem categorias padrão do sistema.
+
+A documentação especifica que as categorias padrão (`clothing`, `phone`, `computer` e `house`) devem estar disponíveis para todas as empresas.
+
+Como consequência, categorias globais não eram encontradas pela consulta individual, fazendo com que produtos associados a essas categorias retornassem `category` como `null`.
+
+## Implementação
+
+A alteração foi realizada no serviço responsável pela recuperação das categorias (`CategoryService`).
+
+Os métodos:
+
+- `getAll()`;
+- `getOne()`;
+
+foram ajustados para considerar tanto categorias específicas de uma empresa quanto categorias padrão compartilhadas entre todas as empresas.
+
+O filtro:
+
+```sql
+c.company_id = <empresa>```
+
+foi ajustado para contemplar também categorias globais:
+
+```sql
+(
+    c.company_id = <empresa>
+    OR c.company_id IS NULL
+)```
+
+Essa alteração mantém a separação entre categorias personalizadas de empresas e categorias padrão do sistema.
+
+## Validação
+
+Após a alteração, foram realizadas as seguintes validações:
+
+- A listagem de categorias passou a retornar categorias padrão e categorias específicas da empresa.
+- O produto utilizado para reproduzir o problema (`iphone 8`) passou a retornar corretamente sua categoria na consulta individual.
+- Produtos vinculados a categorias específicas da empresa continuaram funcionando normalmente.
+- A consulta de listagem de produtos manteve o comportamento esperado.
+
+## Considerações
+
+Durante a investigação foi identificada uma inconsistência entre a implementação da regra de categorias e a documentação do sistema.
+
+A correção foi aplicada no serviço responsável pela regra de negócio, evitando alterações específicas no fluxo de produtos e garantindo que os diferentes endpoints utilizem o mesmo critério de recuperação de categorias.
+
+Também foi observado que a aplicação possui consultas SQL com interpolação direta de valores, o que pode representar uma oportunidade futura de melhoria relacionada ao uso de parâmetros preparados. Essa alteração não foi realizada por não fazer parte do escopo da correção proposta.
