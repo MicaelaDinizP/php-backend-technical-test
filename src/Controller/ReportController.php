@@ -45,28 +45,30 @@ class ReportController
 
             $logs = [];
 
-            foreach ($productLogs as $log) {
-                $action = match ($log->action) {
-                    'create' => 'Criação',
-                    'update' => 'Atualização',
-                    'delete' => 'Remoção',
-                    default => $log->action,
-                };
+foreach ($productLogs as $log) {
+    $action = match ($log->action) {
+        'create' => 'Criação',
+        'update' => 'Atualização',
+        'delete' => 'Remoção',
+        default => $log->action,
+    };
 
-                $logs[] = sprintf(
-                    '(%s, %s, %s)',
-                    $log->name,
-                    $action,
-                    date('d/m/Y H:i:s', strtotime($log->timestamp))
-                );
-            }
+    $date = new \DateTime($log->timestamp);
 
+    $logs[] = sprintf(
+        '(%s, %s, %s)',
+        $log->name,
+        $action,
+        $date->format('d/m/Y H:i:s')
+    );
+}
             $data[$i + 1][] = $product->id;
             $data[$i + 1][] = $companyName;
             $data[$i + 1][] = $product->title;
             $data[$i + 1][] = $product->price;
             $data[$i + 1][] = $product->category;
-            $data[$i + 1][] = $product->created_at;
+            $data[$i + 1][] = (new \DateTime($product->created_at))
+    ->format('d/m/Y H:i:s');
             $data[$i + 1][] = implode(', ', $logs);
         }
 
