@@ -429,3 +429,67 @@ A correção foi aplicada mantendo o escopo da issue, alterando apenas o fluxo r
 
 Durante a alteração do modelo `Product`, os testes unitários existentes foram atualizados para refletir o novo comportamento da entidade, substituindo a validação de uma única categoria pela validação de uma coleção de categorias.
 
+# 26/07/2026
+
+## Tarefa
+
+Corrigir a exibição dos logs de alterações no relatório de produtos.
+
+**Issue:** #12 – Corrigir exibição da coluna de logs no relatório  
+**Branch:** `fix/report-log-format`
+
+## Contexto
+
+Durante a validação do relatório de produtos foi identificado que a coluna **Logs de Alterações** não era exibida corretamente.
+
+Ao gerar o relatório, a aplicação emitia o aviso `Array to string conversion` e apresentava apenas o texto `Array` na coluna destinada aos logs, impossibilitando a visualização do histórico de alterações de cada produto.
+
+Além disso, o requisito estabelecia que os logs deveriam ser apresentados no formato:
+
+`(Nome do usuário, Tipo de alteração, Data)`
+
+## Análise
+
+A investigação foi iniciada reproduzindo o problema por meio da geração do relatório de produtos.
+
+Inicialmente foram analisados os componentes envolvidos no fluxo de geração do relatório:
+
+- `ReportController::generate()`;
+- `ProductService::getAll()`;
+- `ProductService::getLog()`;
+- Tabelas `product_log` e `admin_user`.
+
+Durante a análise, foi identificado que o método `ProductService::getLog()` retornava uma coleção de registros utilizando `fetchAll()`. Entretanto, esse resultado era adicionado diretamente à estrutura utilizada para gerar a tabela HTML do relatório.
+
+Como consequência, durante a renderização da tabela, o PHP tentava converter um array em string, resultando no aviso `Array to string conversion` e na exibição do texto `Array` na coluna de logs.
+
+Também foi identificado que a consulta responsável pela recuperação dos logs retornava apenas os dados da tabela `product_log`, não recuperando o nome do usuário responsável pela alteração, informação necessária para atender ao formato especificado no requisito.
+
+## Implementação
+
+A consulta responsável pela recuperação dos logs foi ajustada para recuperar também o nome do usuário responsável pela alteração por meio de um `JOIN` com a tabela `admin_user`.
+
+Em seguida, o fluxo de geração do relatório foi alterado para formatar os registros retornados antes de adicioná-los à tabela.
+
+Cada log passou a ser convertido para o formato:
+
+`(Nome do usuário, Tipo de alteração, Data)`
+
+As ações armazenadas no banco de dados (`create`, `update` e `delete`) passaram a ser traduzidas para descrições mais amigáveis (`Criação`, `Atualização` e `Remoção`), e as datas foram formatadas para o padrão `dd/mm/aaaa HH:mm:ss`.
+
+Também foi padronizada a exibição da coluna **Data de Criação**, utilizando o mesmo formato adotado para os registros de log.
+
+## Validação
+
+Após a implementação, foram realizadas as seguintes validações:
+
+- O relatório passou a exibir corretamente o histórico de alterações de cada produto.
+- O aviso `Array to string conversion` deixou de ocorrer durante a geração do relatório.
+- Os logs passaram a ser apresentados no formato especificado pelo requisito.
+- A coluna **Data de Criação** passou a utilizar o formato `dd/mm/aaaa HH:mm:ss`, mantendo consistência com as datas dos logs.
+
+## Considerações
+
+A correção foi aplicada mantendo o escopo da issue, alterando apenas o fluxo responsável pela recuperação e apresentação dos logs de alterações no relatório de produtos.
+
+A solução preservou a estrutura existente do relatório, concentrando as alterações na consulta de recuperação dos logs e na formatação das informações antes da geração da tabela HTML.
