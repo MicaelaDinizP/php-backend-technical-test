@@ -15,13 +15,13 @@ class ProductService
     public function getAll($adminUserId, array $filters = [])
 {
     $query = "
-        SELECT 
-            p.*, 
+        SELECT
+            p.*,
             c.title AS category
         FROM product p
-        INNER JOIN product_category pc 
+        INNER JOIN product_category pc
             ON pc.product_id = p.id
-        INNER JOIN category c 
+        INNER JOIN category c
             ON c.id = pc.cat_id
         WHERE p.company_id = :companyId
     ";
@@ -30,32 +30,32 @@ class ProductService
         ':companyId' => $adminUserId
     ];
 
-
     if (isset($filters['active'])) {
         $query .= " AND p.active = :active";
         $params[':active'] = $filters['active'];
     }
-
 
     if (isset($filters['category'])) {
         $query .= " AND c.id = :category";
         $params[':category'] = $filters['category'];
     }
 
+    if (isset($filters['min_stock'])) {
+        $query .= " AND p.stock >= :min_stock";
+        $params[':min_stock'] = $filters['min_stock'];
+    }
 
     if (isset($filters['sort'])) {
-    if ($filters['sort'] === 'asc') {
-        $query .= " ORDER BY p.created_at ASC, p.id ASC";
-    }
+        if ($filters['sort'] === 'asc') {
+            $query .= " ORDER BY p.created_at ASC, p.id ASC";
+        }
 
-    if ($filters['sort'] === 'desc') {
-        $query .= " ORDER BY p.created_at DESC, p.id DESC";
+        if ($filters['sort'] === 'desc') {
+            $query .= " ORDER BY p.created_at DESC, p.id DESC";
+        }
     }
-}
-
 
     $stm = $this->pdo->prepare($query);
-
     $stm->execute($params);
 
     return $stm;
