@@ -8,7 +8,7 @@ use Contatoseguro\TesteBackend\Controller\ReportController;
 use Slim\App;
 use Slim\Routing\RouteCollectorProxy;
 
-/** @var App $app*/
+/** @var App $app */
 $app->get('/', [HomeController::class, 'home']);
 
 $app->group('/companies', function (RouteCollectorProxy $group) {
@@ -27,7 +27,11 @@ $app->group('/products', function (RouteCollectorProxy $group) {
 $app->group('/categories', function (RouteCollectorProxy $group) {
     $group->get('', [CategoryController::class, 'getAll']);
     $group->get('/{id}', [CategoryController::class, 'getOne']);
+
     $group->post('', [CategoryController::class, 'insertOne']);
+
+    $group->post('/{id}', [CategoryController::class, 'insertTranslations']);
+
     $group->put('/{id}', [CategoryController::class, 'updateOne']);
     $group->delete('/{id}', [CategoryController::class, 'deleteOne']);
 });
