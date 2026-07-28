@@ -15,13 +15,13 @@ class ProductService
     public function getAll($adminUserId, array $filters = [])
 {
     $query = "
-        SELECT 
-            p.*, 
+        SELECT
+            p.*,
             c.title AS category
         FROM product p
-        INNER JOIN product_category pc 
+        INNER JOIN product_category pc
             ON pc.product_id = p.id
-        INNER JOIN category c 
+        INNER JOIN category c
             ON c.id = pc.cat_id
         WHERE p.company_id = :companyId
     ";
@@ -30,32 +30,32 @@ class ProductService
         ':companyId' => $adminUserId
     ];
 
-
     if (isset($filters['active'])) {
         $query .= " AND p.active = :active";
         $params[':active'] = $filters['active'];
     }
-
 
     if (isset($filters['category'])) {
         $query .= " AND c.id = :category";
         $params[':category'] = $filters['category'];
     }
 
+    if (isset($filters['min_stock'])) {
+        $query .= " AND p.stock >= :min_stock";
+        $params[':min_stock'] = $filters['min_stock'];
+    }
 
     if (isset($filters['sort'])) {
-    if ($filters['sort'] === 'asc') {
-        $query .= " ORDER BY p.created_at ASC, p.id ASC";
-    }
+        if ($filters['sort'] === 'asc') {
+            $query .= " ORDER BY p.created_at ASC, p.id ASC";
+        }
 
-    if ($filters['sort'] === 'desc') {
-        $query .= " ORDER BY p.created_at DESC, p.id DESC";
+        if ($filters['sort'] === 'desc') {
+            $query .= " ORDER BY p.created_at DESC, p.id DESC";
+        }
     }
-}
-
 
     $stm = $this->pdo->prepare($query);
-
     $stm->execute($params);
 
     return $stm;
@@ -74,87 +74,102 @@ class ProductService
     }
 
     public function insertOne($body, $adminUserId)
-    {
-        $stm = $this->pdo->prepare("
-            INSERT INTO product (
-                company_id,
-                title,
-                price,
-                active
-            ) VALUES (
-                {$body['company_id']},
-                '{$body['title']}',
-                {$body['price']},
-                {$body['active']}
-            )
-        ");
-        if (!$stm->execute())
-            return false;
+{
+    $stock = $body['stock'] ?? 0;
 
-        $productId = $this->pdo->lastInsertId();
+    $stm = $this->pdo->prepare("
+        INSERT INTO product (
+            company_id,
+            title,
+            price,
+            active,
+            stock
+        ) VALUES (
+            {$body['company_id']},
+            '{$body['title']}',
+            {$body['price']},
+            {$body['active']},
+            {$stock}
+        )
+    ");
 
-        $stm = $this->pdo->prepare("
-            INSERT INTO product_category (
-                product_id,
-                cat_id
-            ) VALUES (
-                {$productId},
-                {$body['category_id']}
-            );
-        ");
-        if (!$stm->execute())
-            return false;
-
-        $stm = $this->pdo->prepare("
-            INSERT INTO product_log (
-                product_id,
-                admin_user_id,
-                `action`
-            ) VALUES (
-                {$productId},
-                {$adminUserId},
-                'create'
-            )
-        ");
-
-        return $stm->execute();
+    if (!$stm->execute()) {
+        return false;
     }
+
+    $productId = $this->pdo->lastInsertId();
+
+    $stm = $this->pdo->prepare("
+        INSERT INTO product_category (
+            product_id,
+            cat_id
+        ) VALUES (
+            {$productId},
+            {$body['category_id']}
+        );
+    ");
+
+    if (!$stm->execute()) {
+        return false;
+    }
+
+    $stm = $this->pdo->prepare("
+        INSERT INTO product_log (
+            product_id,
+            admin_user_id,
+            `action`
+        ) VALUES (
+            {$productId},
+            {$adminUserId},
+            'create'
+        )
+    ");
+
+    return $stm->execute();
+}
 
     public function updateOne($id, $body, $adminUserId)
-    {
-        $stm = $this->pdo->prepare("
-            UPDATE product
-            SET company_id = {$body['company_id']},
-                title = '{$body['title']}',
-                price = {$body['price']},
-                active = {$body['active']}
-            WHERE id = {$id}
-        ");
-        if (!$stm->execute())
-            return false;
+{
+    $stock = $body['stock'] ?? 0;
 
-        $stm = $this->pdo->prepare("
-            UPDATE product_category
-            SET cat_id = {$body['category_id']}
-            WHERE product_id = {$id}
-        ");
-        if (!$stm->execute())
-            return false;
+    $stm = $this->pdo->prepare("
+        UPDATE product
+        SET company_id = {$body['company_id']},
+            title = '{$body['title']}',
+            price = {$body['price']},
+            active = {$body['active']},
+            stock = {$stock}
+        WHERE id = {$id}
+    ");
 
-        $stm = $this->pdo->prepare("
-            INSERT INTO product_log (
-                product_id,
-                admin_user_id,
-                `action`
-            ) VALUES (
-                {$id},
-                {$adminUserId},
-                'update'
-            )
-        ");
-
-        return $stm->execute();
+    if (!$stm->execute()) {
+        return false;
     }
+
+    $stm = $this->pdo->prepare("
+        UPDATE product_category
+        SET cat_id = {$body['category_id']}
+        WHERE product_id = {$id}
+    ");
+
+    if (!$stm->execute()) {
+        return false;
+    }
+
+    $stm = $this->pdo->prepare("
+        INSERT INTO product_log (
+            product_id,
+            admin_user_id,
+            `action`
+        ) VALUES (
+            {$id},
+            {$adminUserId},
+            'update'
+        )
+    ");
+
+    return $stm->execute();
+}
 
     public function deleteOne($id, $adminUserId)
     {

@@ -129,9 +129,9 @@ POST "$base_url/categories/:id"
 
 ### Estoque
 Além das informações já disponíveis do produto, desejo acrescentar também uma contagem de estoque para cada, a qual deve seguir algumas regras:
-- [ ] Posso cadastrar a quantidade do estoque assim que cadastro um produto, mas se não for informado assumo que o estoque é _0_;
-- [ ] Posso atualizar o estoque de um produto;
-- [ ] Ao buscar um produto, posso filtrar por uma quantidade mínima em estoque.
+- [x] Posso cadastrar a quantidade do estoque assim que cadastro um produto, mas se não for informado assumo que o estoque é _0_;
+- [x] Posso atualizar o estoque de um produto;
+- [x] Ao buscar um produto, posso filtrar por uma quantidade mínima em estoque.
 
 ### Comentários
 Quero que os usuários do sistema possam discutir sobre os produtos em uma área de comentários.
