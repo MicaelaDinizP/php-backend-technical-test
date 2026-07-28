@@ -33,24 +33,27 @@ class CategoryService
     }
 
   public function getOne($adminUserId, $categoryId)
-{
-    $query = "
-        SELECT *
-        FROM category c
-        WHERE c.active = 1
-        AND c.id = {$categoryId}
-        AND (
-            c.company_id = {$this->getCompanyFromAdminUser($adminUserId)}
-            OR c.company_id IS NULL
-        )
-    ";
+    {
+        $query = "
+            SELECT *
+            FROM category c
+            WHERE c.active = 1
+            AND c.id = :categoryId
+            AND (
+                c.company_id = :companyId
+                OR c.company_id IS NULL
+            )
+        ";
 
-    $stm = $this->pdo->prepare($query);
+        $stm = $this->pdo->prepare($query);
 
-    $stm->execute();
+        $stm->execute([
+            ':categoryId' => (int) $categoryId,
+            ':companyId' => (int) $this->getCompanyFromAdminUser($adminUserId),
+        ]);
 
-    return $stm;
-}
+        return $stm;
+    }
 
     public function getProductCategory($productId)
     {
