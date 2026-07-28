@@ -97,17 +97,21 @@ class CategoryService
 
     public function updateOne($id, $body, $adminUserId)
     {
-        $active = (int)$body['active'];
-
         $stm = $this->pdo->prepare("
             UPDATE category
-            SET title = '{$body['title']}',
-                active = {$active}
-            WHERE id = {$id}
-            AND company_id = {$this->getCompanyFromAdminUser($adminUserId)}
+            SET
+                title = :title,
+                active = :active
+            WHERE id = :id
+            AND company_id = :company_id
         ");
 
-        return $stm->execute();
+        return $stm->execute([
+            ':title' => (string) $body['title'],
+            ':active' => (int) $body['active'],
+            ':id' => (int) $id,
+            ':company_id' => (int) $this->getCompanyFromAdminUser($adminUserId),
+        ]);
     }
 
     public function deleteOne($id, $adminUserId)
