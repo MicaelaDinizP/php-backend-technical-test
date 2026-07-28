@@ -73,11 +73,14 @@ class ProductService
             ':id' => (int) $id,
         ]);
 
-    return $stm;
-}
+        return $stm;
+    }
 
     public function insertOne($body, $adminUserId)
-    {
+{
+    try {
+        $this->pdo->beginTransaction();
+
         $stm = $this->pdo->prepare("
             INSERT INTO product (
                 company_id,
@@ -85,28 +88,42 @@ class ProductService
                 price,
                 active
             ) VALUES (
-                {$body['company_id']},
-                '{$body['title']}',
-                {$body['price']},
-                {$body['active']}
+                :company_id,
+                :title,
+                :price,
+                :active
             )
         ");
-        if (!$stm->execute())
-            return false;
 
-        $productId = $this->pdo->lastInsertId();
+        if (!$stm->execute([
+            ':company_id' => (int) $body['company_id'],
+            ':title' => (string) $body['title'],
+            ':price' => (float) $body['price'],
+            ':active' => (int) $body['active'],
+        ])) {
+            $this->pdo->rollBack();
+            return false;
+        }
+
+        $productId = (int) $this->pdo->lastInsertId();
 
         $stm = $this->pdo->prepare("
             INSERT INTO product_category (
                 product_id,
                 cat_id
             ) VALUES (
-                {$productId},
-                {$body['category_id']}
-            );
+                :product_id,
+                :cat_id
+            )
         ");
-        if (!$stm->execute())
+
+        if (!$stm->execute([
+            ':product_id' => $productId,
+            ':cat_id' => (int) $body['category_id'],
+        ])) {
+            $this->pdo->rollBack();
             return false;
+        }
 
         $stm = $this->pdo->prepare("
             INSERT INTO product_log (
@@ -114,15 +131,32 @@ class ProductService
                 admin_user_id,
                 `action`
             ) VALUES (
-                {$productId},
-                {$adminUserId},
-                'create'
+                :product_id,
+                :admin_user_id,
+                :action
             )
         ");
 
-        return $stm->execute();
-    }
+        if (!$stm->execute([
+            ':product_id' => $productId,
+            ':admin_user_id' => (int) $adminUserId,
+            ':action' => 'create',
+        ])) {
+            $this->pdo->rollBack();
+            return false;
+        }
 
+        $this->pdo->commit();
+
+        return true;
+    } catch (\Throwable $e) {
+        if ($this->pdo->inTransaction()) {
+            $this->pdo->rollBack();
+        }
+
+        return false;
+    }
+}
     public function updateOne($id, $body, $adminUserId)
     {
         $stm = $this->pdo->prepare("
