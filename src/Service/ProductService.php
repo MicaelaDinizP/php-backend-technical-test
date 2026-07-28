@@ -66,12 +66,15 @@ class ProductService
         $stm = $this->pdo->prepare("
             SELECT *
             FROM product
-            WHERE id = {$id}
+            WHERE id = :id
         ");
-        $stm->execute();
 
-        return $stm;
-    }
+        $stm->execute([
+            ':id' => (int) $id,
+        ]);
+
+    return $stm;
+}
 
     public function insertOne($body, $adminUserId)
     {
