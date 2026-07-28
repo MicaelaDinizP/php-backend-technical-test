@@ -493,3 +493,76 @@ Após a implementação, foram realizadas as seguintes validações:
 A correção foi aplicada mantendo o escopo da issue, alterando apenas o fluxo responsável pela recuperação e apresentação dos logs de alterações no relatório de produtos.
 
 A solução preservou a estrutura existente do relatório, concentrando as alterações na consulta de recuperação dos logs e na formatação das informações antes da geração da tabela HTML.
+
+# 27/07/2026
+
+## Tarefa
+
+Implementar filtros e ordenação na listagem de produtos.
+
+**Issue:** #15 – Implementar filtros e ordenação na listagem de produtos  
+**Branch:** `feature/product-list-filters-and-sorting`
+
+## Contexto
+
+A listagem de produtos não disponibilizava mecanismos para restringir ou organizar os resultados retornados pela API.
+
+A demanda consistia em permitir:
+
+- Filtrar produtos ativos ou inativos;
+- Filtrar produtos por categoria;
+- Ordenar os produtos pela data de cadastro.
+
+A implementação deveria preservar o comportamento atual da listagem quando nenhum filtro fosse informado, mantendo compatibilidade com as demais funcionalidades da aplicação.
+
+## Análise
+
+Inicialmente foi analisado o fluxo responsável pela recuperação da listagem de produtos.
+
+Foram avaliados os seguintes componentes:
+
+- `ProductController::getAll()`;
+- `ProductService::getAll()`;
+- Tabelas `product`, `product_category` e `category`.
+
+Durante a análise foi identificado que a consulta já realizava o relacionamento entre produtos e categorias por meio das tabelas `product_category` e `category`, retornando o título da categoria para cada produto.
+
+## Implementação
+
+O endpoint de listagem passou a aceitar parâmetros opcionais para filtragem e ordenação.
+
+Foi implementado o filtro por status do produto, permitindo listar produtos ativos ou inativos por meio do atributo `active`.
+
+Também foi implementado o filtro por categoria utilizando o identificador da categoria (`category_id`), aplicando a restrição diretamente na consulta responsável pelo relacionamento entre produtos e categorias.
+
+Por fim, foi adicionada a ordenação da listagem pela data de cadastro (`created_at`), permitindo controlar a sequência de apresentação dos produtos sem alterar a estrutura de retorno da API.
+
+A implementação foi realizada preservando o comportamento anterior quando nenhum parâmetro de filtro ou ordenação é informado.
+
+Filtros definidos: 
+- active=1 para categorias ativas ou active=0 para categorias inativas;
+- category=id, informando o id da categoria desejada;
+- sort=asc para ordenação crescente ou sort=desc para ordenação decrescente da data de cadastro. 
+
+## Validação
+
+Após a implementação foram realizados testes utilizando diferentes combinações de parâmetros da API.
+
+Foram validados os seguintes cenários:
+
+- Listagem sem filtros.
+- Filtragem de produtos ativos.
+- Filtragem de produtos inativos.
+- Filtragem por categoria.
+- Combinação dos filtros de status e categoria.
+- Ordenação crescente por data de cadastro.
+- Ordenação decrescente por data de cadastro.
+- Combinação simultânea de filtros e ordenação.
+- Consulta utilizando categoria inexistente.
+
+Os resultados retornados em todos os cenários foram comparados com os dados cadastrados no banco de dados, confirmando que os filtros e a ordenação produziram os resultados esperados.
+
+## Considerações
+
+A solução preservou a estrutura existente da API, concentrando as alterações na construção da consulta responsável pela listagem dos produtos.
+

@@ -12,22 +12,54 @@ class ProductService
         $this->pdo = DB::connect();
     }
 
-    public function getAll($adminUserId)
-    {
-        $query = "
-            SELECT p.*, c.title as category
-            FROM product p
-            INNER JOIN product_category pc ON pc.product_id = p.id
-            INNER JOIN category c ON c.id = pc.cat_id
-            WHERE p.company_id = {$adminUserId}
-        ";
+    public function getAll($adminUserId, array $filters = [])
+{
+    $query = "
+        SELECT 
+            p.*, 
+            c.title AS category
+        FROM product p
+        INNER JOIN product_category pc 
+            ON pc.product_id = p.id
+        INNER JOIN category c 
+            ON c.id = pc.cat_id
+        WHERE p.company_id = :companyId
+    ";
 
-        $stm = $this->pdo->prepare($query);
+    $params = [
+        ':companyId' => $adminUserId
+    ];
 
-        $stm->execute();
 
-        return $stm;
+    if (isset($filters['active'])) {
+        $query .= " AND p.active = :active";
+        $params[':active'] = $filters['active'];
     }
+
+
+    if (isset($filters['category'])) {
+        $query .= " AND c.id = :category";
+        $params[':category'] = $filters['category'];
+    }
+
+
+    if (isset($filters['sort'])) {
+    if ($filters['sort'] === 'asc') {
+        $query .= " ORDER BY p.created_at ASC, p.id ASC";
+    }
+
+    if ($filters['sort'] === 'desc') {
+        $query .= " ORDER BY p.created_at DESC, p.id DESC";
+    }
+}
+
+
+    $stm = $this->pdo->prepare($query);
+
+    $stm->execute($params);
+
+    return $stm;
+}
 
     public function getOne($id)
     {
