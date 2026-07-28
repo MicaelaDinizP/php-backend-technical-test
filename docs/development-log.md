@@ -566,3 +566,79 @@ Os resultados retornados em todos os cenários foram comparados com os dados cad
 
 A solução preservou a estrutura existente da API, concentrando as alterações na construção da consulta responsável pela listagem dos produtos.
 
+# 27/07/2026
+
+## Tarefa
+
+Implementar controle de estoque para produtos.
+
+**Issue:** #17 – Implementar controle de estoque de produtos  
+**Branch:** `feature/product-stock-control`
+
+## Contexto
+
+O sistema passou a exigir o controle da quantidade disponível em estoque para cada produto.
+
+A nova funcionalidade deveria permitir:
+
+- Informar a quantidade em estoque durante o cadastro do produto;
+- Assumir automaticamente o valor `0` quando o estoque não fosse informado;
+- Atualizar a quantidade em estoque de produtos já cadastrados;
+- Filtrar a listagem de produtos por uma quantidade mínima em estoque.
+
+Como a funcionalidade exigia alteração na estrutura do banco de dados, também foi necessária a criação de uma migration para persistir a nova coluna, conforme o padrão adotado pelo projeto.
+
+## Análise
+
+Inicialmente foi analisado o fluxo completo responsável pelo cadastro, atualização e consulta de produtos.
+
+Foram avaliados os seguintes componentes:
+
+- `ProductController`;
+- `ProductService`;
+- `Product`;
+- Tabela `product`;
+- Testes unitários da entidade `Product`;
+- Coleção do Postman.
+
+Durante a análise foi identificado que a entidade `Product` não possuía um atributo responsável pelo controle de estoque e que as operações de cadastro e atualização manipulavam apenas os atributos já existentes do produto.
+
+Também foi verificado que o método responsável pela listagem já possuía uma estrutura preparada para receber filtros adicionais, permitindo reutilizar o padrão existente para implementar o filtro de estoque mínimo.
+
+## Implementação
+
+Foi criada uma migration adicionando a coluna `stock` à tabela `product`, definindo o valor padrão `0` para registros em que nenhuma quantidade seja informada.
+
+A entidade `Product` foi atualizada para representar o novo atributo, bem como o método de hidratação (`hydrateByFetch()`), garantindo que o estoque seja corretamente carregado a partir do banco de dados.
+
+As operações de cadastro e atualização de produtos foram modificadas para aceitar o novo atributo `stock`. Durante o cadastro, quando nenhuma quantidade é enviada pela requisição, o sistema passa a assumir automaticamente o valor `0`, conforme especificado nos requisitos.
+
+Também foi implementado um novo filtro na listagem de produtos, permitindo retornar apenas produtos cuja quantidade em estoque seja maior ou igual ao valor informado pelo parâmetro `min_stock`.
+
+Por fim, foram atualizados os testes unitários da entidade `Product`, adequando-os ao novo construtor e adicionando validações referentes ao atributo de estoque.
+
+A coleção do Postman também foi atualizada para incluir exemplos de utilização do novo campo e do filtro implementado.
+
+## Validação
+
+Após a implementação foram realizados testes para validar os principais cenários da funcionalidade.
+
+Foram validados os seguintes casos:
+
+- Cadastro de produto informando estoque.
+- Cadastro de produto sem informar estoque.
+- Aplicação automática do valor padrão `0`.
+- Atualização da quantidade em estoque.
+- Consulta individual retornando o estoque.
+- Listagem retornando o atributo `stock`.
+- Filtragem utilizando o parâmetro `min_stock`.
+- Combinação do filtro de estoque com os demais filtros existentes.
+- Execução dos testes unitários atualizados.
+
+Os resultados obtidos confirmaram que a funcionalidade atende aos requisitos definidos, preservando o comportamento das operações existentes e mantendo compatibilidade com a estrutura atual da aplicação.
+
+## Considerações
+
+A implementação foi realizada reutilizando a arquitetura já existente do projeto, concentrando as alterações na entidade de produto, na camada de serviço, na estrutura do banco de dados e na documentação da API.
+
+A utilização de uma migration garante que a alteração estrutural possa ser reproduzida em outros ambientes sem depender do arquivo do banco de dados, mantendo o processo de implantação consistente com as diretrizes do projeto.
