@@ -74,51 +74,59 @@ class ProductService
     }
 
     public function insertOne($body, $adminUserId)
-    {
-        $stm = $this->pdo->prepare("
-            INSERT INTO product (
-                company_id,
-                title,
-                price,
-                active
-            ) VALUES (
-                {$body['company_id']},
-                '{$body['title']}',
-                {$body['price']},
-                {$body['active']}
-            )
-        ");
-        if (!$stm->execute())
-            return false;
+{
+    $stock = $body['stock'] ?? 0;
 
-        $productId = $this->pdo->lastInsertId();
+    $stm = $this->pdo->prepare("
+        INSERT INTO product (
+            company_id,
+            title,
+            price,
+            active,
+            stock
+        ) VALUES (
+            {$body['company_id']},
+            '{$body['title']}',
+            {$body['price']},
+            {$body['active']},
+            {$stock}
+        )
+    ");
 
-        $stm = $this->pdo->prepare("
-            INSERT INTO product_category (
-                product_id,
-                cat_id
-            ) VALUES (
-                {$productId},
-                {$body['category_id']}
-            );
-        ");
-        if (!$stm->execute())
-            return false;
-
-        $stm = $this->pdo->prepare("
-            INSERT INTO product_log (
-                product_id,
-                admin_user_id,
-                `action`
-            ) VALUES (
-                {$productId},
-                {$adminUserId},
-                'create'
-            )
-        ");
-
-        return $stm->execute();
+    if (!$stm->execute()) {
+        return false;
     }
+
+    $productId = $this->pdo->lastInsertId();
+
+    $stm = $this->pdo->prepare("
+        INSERT INTO product_category (
+            product_id,
+            cat_id
+        ) VALUES (
+            {$productId},
+            {$body['category_id']}
+        );
+    ");
+
+    if (!$stm->execute()) {
+        return false;
+    }
+
+    $stm = $this->pdo->prepare("
+        INSERT INTO product_log (
+            product_id,
+            admin_user_id,
+            `action`
+        ) VALUES (
+            {$productId},
+            {$adminUserId},
+            'create'
+        )
+    ");
+
+    return $stm->execute();
+}
 
     public function updateOne($id, $body, $adminUserId)
     {
