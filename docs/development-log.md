@@ -642,3 +642,86 @@ Os resultados obtidos confirmaram que a funcionalidade atende aos requisitos def
 A implementação foi realizada reutilizando a arquitetura já existente do projeto, concentrando as alterações na entidade de produto, na camada de serviço, na estrutura do banco de dados e na documentação da API.
 
 A utilização de uma migration garante que a alteração estrutural possa ser reproduzida em outros ambientes sem depender do arquivo do banco de dados, mantendo o processo de implantação consistente com as diretrizes do projeto.
+
+# 28/07/2026
+
+## Tarefa
+
+Implementar suporte à tradução de categorias.
+
+**Issue:** #18 – Implementar suporte a traduções de categorias
+**Branch:** `feature/category-translations`
+
+## Contexto
+
+O sistema passou a exigir suporte à internacionalização das categorias para permitir que a API seja utilizada em diferentes idiomas.
+
+A funcionalidade deveria permitir:
+
+- Cadastrar múltiplas traduções para uma categoria;
+- Impedir o cadastro de traduções duplicadas para uma mesma categoria;
+- Garantir que, caso uma única tradução inválida seja enviada, nenhuma tradução seja persistida;
+- Permitir que produtos e categorias sejam consultados em diferentes idiomas por meio do parâmetro opcional `lang`;
+- Utilizar inglês como idioma padrão sempre que nenhuma tradução correspondente estiver disponível;
+- Atualizar a coleção do Postman com os novos exemplos de utilização.
+
+Como a funcionalidade exige persistência das traduções, também foi necessária a criação de uma nova estrutura no banco de dados por meio de uma migration.
+
+## Análise
+
+Inicialmente foi analisado o fluxo responsável pela recuperação das categorias e pela associação entre produtos e categorias.
+
+Foram avaliados os seguintes componentes:
+
+- `CategoryController`;
+- `CategoryService`;
+- `ProductController`;
+- Tabelas `category` e `product_category`;
+- Estrutura de rotas da API;
+- Coleção do Postman.
+
+Durante a análise foi identificado que a entidade de categoria armazenava apenas um único título, impossibilitando a representação de múltiplos idiomas.
+
+Também foi identificado que a busca individual de produtos obtém as categorias por meio do `CategoryService`, permitindo reutilizar essa camada para aplicar a tradução sem alterar a estrutura da entidade `Product`.
+
+## Implementação
+
+Foi criada uma migration adicionando a tabela `category_translation`, responsável por armazenar as traduções associadas às categorias.
+
+Também foi criada uma restrição de unicidade para impedir o cadastro de mais de uma tradução para o mesmo idioma dentro de uma categoria.
+
+Foi implementado um novo endpoint responsável pelo cadastro de traduções, permitindo registrar múltiplos idiomas em uma única requisição.
+
+A operação foi implementada utilizando transação no banco de dados, garantindo que qualquer erro durante o processamento provoque o rollback completo da operação, preservando a consistência dos dados.
+
+As consultas de categorias passaram a aceitar o parâmetro opcional `lang`, retornando a tradução correspondente quando disponível.
+
+Quando nenhuma tradução é encontrada para o idioma solicitado, ou quando o parâmetro não é informado, a API passa a utilizar automaticamente a tradução em inglês como idioma padrão, conforme definido nos requisitos.
+
+A consulta individual de produtos também foi adaptada para utilizar o idioma informado durante a recuperação das categorias associadas ao produto.
+
+Por fim, a coleção do Postman foi atualizada para incluir o novo endpoint e exemplos de utilização da funcionalidade.
+
+## Validação
+
+Após a implementação foram realizados testes contemplando os principais cenários da funcionalidade.
+
+Foram validados os seguintes casos:
+
+- Cadastro de múltiplas traduções para uma categoria.
+- Cadastro de traduções para diferentes idiomas.
+- Tentativa de cadastro de tradução duplicada.
+- Verificação do rollback quando ocorre erro durante a operação.
+- Consulta de categorias utilizando diferentes idiomas.
+- Consulta de categorias sem informar o parâmetro `lang`.
+- Consulta utilizando idioma inexistente, validando o fallback para inglês.
+- Consulta individual de produtos retornando categorias traduzidas.
+- Atualização da coleção do Postman.
+
+Os resultados confirmaram que a funcionalidade atende aos requisitos definidos, preservando o comportamento existente da aplicação e garantindo a consistência das informações persistidas.
+
+## Considerações
+
+A implementação foi realizada preservando a arquitetura existente do projeto, concentrando as alterações na camada de serviço, nas rotas da API, na estrutura do banco de dados e na documentação.
+
+A utilização de uma tabela dedicada para traduções desacopla o idioma da entidade de categoria, permitindo a inclusão de novos idiomas sem necessidade de alterações estruturais futuras.

@@ -122,10 +122,10 @@ POST "$base_url/categories/:id"
   ]
 }
 ```
-- [ ] Não deve ser possível cadastrar traduções repetidas, se uma única tradução repetida foi enviada, nenhuma deve persistir;
-- [ ] Ao buscar por produtos/categorias, o parâmetro adicional opcional "_`lang`_" pode ser passado para determinar a linguagem em que a categoria deve ser retornada;
-- [ ] Caso não haja categoria correspondente ou não seja especificado por parâmetro, retornar em inglês;
-- [ ] Inclua a rota e as modificações na coleção do Postman no repositório.
+- [x] Não deve ser possível cadastrar traduções repetidas, se uma única tradução repetida foi enviada, nenhuma deve persistir;
+- [x] Ao buscar por produtos/categorias, o parâmetro adicional opcional "_`lang`_" pode ser passado para determinar a linguagem em que a categoria deve ser retornada;
+- [x] Caso não haja categoria correspondente ou não seja especificado por parâmetro, retornar em inglês;
+- [x] Inclua a rota e as modificações na coleção do Postman no repositório.
 
 ### Estoque
 Além das informações já disponíveis do produto, desejo acrescentar também uma contagem de estoque para cada, a qual deve seguir algumas regras:
