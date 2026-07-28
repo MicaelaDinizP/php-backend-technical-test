@@ -296,16 +296,19 @@ class ProductService
     {
         $stm = $this->pdo->prepare("
             SELECT
-    au.name,
-    pl.action,
-    pl.timestamp
-FROM product_log pl
-INNER JOIN admin_user au
-    ON au.id = pl.admin_user_id
-WHERE pl.product_id = {$id}
-ORDER BY pl.timestamp;
+                au.name,
+                pl.action,
+                pl.timestamp
+            FROM product_log pl
+            INNER JOIN admin_user au
+                ON au.id = pl.admin_user_id
+            WHERE pl.product_id = :product_id
+            ORDER BY pl.timestamp
         ");
-        $stm->execute();
+
+        $stm->execute([
+            ':product_id' => (int) $id,
+        ]);
 
         return $stm;
     }
