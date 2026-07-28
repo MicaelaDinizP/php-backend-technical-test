@@ -13,6 +13,7 @@ class Product
         public string $title,
         public float $price,
         public bool $active,
+        public int $stock,
         public string $createdAt
     ) {
     }
@@ -25,6 +26,7 @@ class Product
             (string)$fetch->title,
             (float)$fetch->price,
             (bool)$fetch->active,
+            (int)$fetch->stock,
             (string)$fetch->created_at
         );
     }
