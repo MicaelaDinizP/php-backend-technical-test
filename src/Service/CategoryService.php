@@ -82,13 +82,17 @@ class CategoryService
                 title,
                 active
             ) VALUES (
-                {$this->getCompanyFromAdminUser($adminUserId)},
-                '{$body['title']}',
-                {$body['active']}
+                :company_id,
+                :title,
+                :active
             )
         ");
 
-        return $stm->execute();
+        return $stm->execute([
+            ':company_id' => (int) $this->getCompanyFromAdminUser($adminUserId),
+            ':title' => (string) $body['title'],
+            ':active' => (int) $body['active'],
+        ]);
     }
 
     public function updateOne($id, $body, $adminUserId)
