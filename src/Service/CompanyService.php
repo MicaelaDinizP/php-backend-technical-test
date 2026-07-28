@@ -12,11 +12,18 @@ class CompanyService
         $this->pdo = DB::connect();
     }
 
-    public function getNameById($id)
+   public function getNameById($id)
     {
-        $stm = $this->pdo->prepare("SELECT name FROM company WHERE id = {$id}");
-        $stm->execute();
-        
+        $stm = $this->pdo->prepare("
+            SELECT name
+            FROM company
+            WHERE id = :id
+        ");
+
+        $stm->execute([
+            ':id' => (int) $id,
+        ]);
+
         return $stm;
     }
 }
