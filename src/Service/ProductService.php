@@ -13,53 +13,49 @@ class ProductService
     }
 
     public function getAll($adminUserId, array $filters = [])
-{
-    $query = "
-        SELECT 
-            p.*, 
-            c.title AS category
-        FROM product p
-        INNER JOIN product_category pc 
-            ON pc.product_id = p.id
-        INNER JOIN category c 
-            ON c.id = pc.cat_id
-        WHERE p.company_id = :companyId
-    ";
+    {
+        $query = "
+            SELECT
+                p.*,
+                c.title AS category
+            FROM product p
+            INNER JOIN product_category pc
+                ON pc.product_id = p.id
+            INNER JOIN category c
+                ON c.id = pc.cat_id
+            WHERE p.company_id = :companyId
+        ";
 
-    $params = [
-        ':companyId' => $adminUserId
-    ];
+        $params = [
+            ':companyId' => (int) $adminUserId,
+        ];
 
+        if (isset($filters['active'])) {
+            $query .= " AND p.active = :active";
+            $params[':active'] = (int) $filters['active'];
+        }
 
-    if (isset($filters['active'])) {
-        $query .= " AND p.active = :active";
-        $params[':active'] = $filters['active'];
+        if (isset($filters['category'])) {
+            $query .= " AND c.id = :category";
+            $params[':category'] = (int) $filters['category'];
+        }
+
+        if (isset($filters['sort'])) {
+            if ($filters['sort'] === 'asc') {
+                $query .= " ORDER BY p.created_at ASC, p.id ASC";
+            }
+
+            if ($filters['sort'] === 'desc') {
+                $query .= " ORDER BY p.created_at DESC, p.id DESC";
+            }
+        }
+
+        $stm = $this->pdo->prepare($query);
+
+        $stm->execute($params);
+
+        return $stm;
     }
-
-
-    if (isset($filters['category'])) {
-        $query .= " AND c.id = :category";
-        $params[':category'] = $filters['category'];
-    }
-
-
-    if (isset($filters['sort'])) {
-    if ($filters['sort'] === 'asc') {
-        $query .= " ORDER BY p.created_at ASC, p.id ASC";
-    }
-
-    if ($filters['sort'] === 'desc') {
-        $query .= " ORDER BY p.created_at DESC, p.id DESC";
-    }
-}
-
-
-    $stm = $this->pdo->prepare($query);
-
-    $stm->execute($params);
-
-    return $stm;
-}
 
     public function getOne($id)
     {
