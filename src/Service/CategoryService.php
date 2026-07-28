@@ -119,11 +119,14 @@ class CategoryService
         $stm = $this->pdo->prepare("
             DELETE
             FROM category
-            WHERE id = {$id}
-            AND company_id = {$this->getCompanyFromAdminUser($adminUserId)}
+            WHERE id = :id
+            AND company_id = :company_id
         ");
 
-        return $stm->execute();
+        return $stm->execute([
+            ':id' => (int) $id,
+            ':company_id' => (int) $this->getCompanyFromAdminUser($adminUserId),
+        ]);
     }
 
     private function getCompanyFromAdminUser($adminUserId)
