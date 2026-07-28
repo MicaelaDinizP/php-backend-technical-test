@@ -117,7 +117,13 @@
 							],
 							"path": [
 								"10"
-							]
+							],
+							"query": [
+    {
+        "key": "lang",
+        "value": "pt"
+    }
+]
 						}
 					},
 					"response": []
@@ -170,7 +176,56 @@
 						}
 					},
 					"response": []
-				},
+				},{
+    "name": "insertTranslations",
+    "event": [
+        {
+            "listen": "test",
+            "script": {
+                "type": "text/javascript",
+                "exec": []
+            }
+        }
+    ],
+    "protocolProfileBehavior": {
+        "followRedirects": true,
+        "disableUrlEncoding": false,
+        "disableCookies": false
+    },
+    "request": {
+        "method": "POST",
+        "header": [
+            {
+                "key": "Content-Type",
+                "value": "application/json"
+            },
+            {
+                "key": "admin_user_id",
+                "value": "1"
+            }
+        ],
+        "body": {
+            "mode": "raw",
+            "raw": "{\n    \"translations\": [\n        {\n            \"lang_code\": \"en\",\n            \"label\": \"Home\"\n        },\n        {\n            \"lang_code\": \"pt\",\n            \"label\": \"Casa\"\n        }\n    ]\n}",
+            "options": {
+                "raw": {
+                    "language": "json"
+                }
+            }
+        },
+        "url": {
+            "raw": "{{ _.base_url }}{{ _.categories }}/4/translations",
+            "host": [
+                "{{ _.base_url }}{{ _.categories }}"
+            ],
+            "path": [
+                "4",
+                "translations"
+            ]
+        }
+    },
+    "response": []
+},
 				{
 					"name": "updateOne",
 					"event": [
@@ -286,14 +341,20 @@
 							}
 						],
 						"url": {
-							"raw": "{{ _.base_url }}{{ _.categories }}/",
-							"host": [
-								"{{ _.base_url }}{{ _.categories }}"
-							],
-							"path": [
-								""
-							]
-						}
+    "raw": "{{ _.base_url }}{{ _.categories }}/?lang=pt",
+    "host": [
+        "{{ _.base_url }}{{ _.categories }}"
+    ],
+    "path": [
+        ""
+    ],
+    "query": [
+        {
+            "key": "lang",
+            "value": "pt"
+        }
+    ]
+}
 					},
 					"response": []
 				},
@@ -322,14 +383,20 @@
 							}
 						],
 						"url": {
-							"raw": "{{ _.base_url }}{{ _.categories }}/4",
-							"host": [
-								"{{ _.base_url }}{{ _.categories }}"
-							],
-							"path": [
-								"4"
-							]
-						}
+    "raw": "{{ _.base_url }}{{ _.categories }}/4?lang=pt",
+    "host": [
+        "{{ _.base_url }}{{ _.categories }}"
+    ],
+    "path": [
+        "4"
+    ],
+    "query": [
+        {
+            "key": "lang",
+            "value": "pt"
+        }
+    ]
+}
 					},
 					"response": []
 				},

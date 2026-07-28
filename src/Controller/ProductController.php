@@ -20,45 +20,54 @@ class ProductController
     }
 
     public function getAll(ServerRequestInterface $request, ResponseInterface $response, array $args): ResponseInterface
-{
-    $adminUserId = $request->getHeader('admin_user_id')[0];
+    {
+        $adminUserId = $request->getHeader('admin_user_id')[0];
 
-    $filters = $request->getQueryParams();
+        $filters = $request->getQueryParams();
 
-    $stm = $this->service->getAll($adminUserId, $filters);
+        $stm = $this->service->getAll($adminUserId, $filters);
 
-    $response->getBody()->write(json_encode($stm->fetchAll()));
+        $response->getBody()->write(json_encode($stm->fetchAll()));
 
-    return $response->withStatus(200);
-}
-
-   public function getOne(ServerRequestInterface $request, ResponseInterface $response, array $args): ResponseInterface
-{
-    $stm = $this->service->getOne($args['id']);
-    $product = Product::hydrateByFetch($stm->fetch());
-
-    $adminUserId = $request->getHeader('admin_user_id')[0];
-
-    $productCategories = $this->categoryService
-        ->getProductCategory($product->id)
-        ->fetchAll();
-
-    $categories = [];
-
-    foreach ($productCategories as $productCategory) {
-        $category = $this->categoryService
-            ->getOne($adminUserId, $productCategory->id)
-            ->fetch();
-
-        $categories[] = $category->title;
+        return $response->withStatus(200);
     }
 
-    $product->setCategories($categories);
+    public function getOne(ServerRequestInterface $request, ResponseInterface $response, array $args): ResponseInterface
+    {
+        $stm = $this->service->getOne($args['id']);
+        $product = Product::hydrateByFetch($stm->fetch());
 
-    $response->getBody()->write(json_encode($product));
+        $adminUserId = $request->getHeader('admin_user_id')[0];
 
-    return $response->withStatus(200);
-}
+        $lang = $request->getQueryParams()['lang'] ?? 'en';
+
+        $productCategories = $this->categoryService
+            ->getProductCategory($product->id)
+            ->fetchAll();
+
+        $categories = [];
+
+        foreach ($productCategories as $productCategory) {
+
+            $category = $this->categoryService
+                ->getOne(
+                    $adminUserId,
+                    $productCategory->id,
+                    $lang
+                )
+                ->fetch();
+
+            if ($category) {
+                $categories[] = $category->title;
+            }
+        }
+
+        $product->setCategories($categories);
+
+        $response->getBody()->write(json_encode($product));
+
+        return $response->withStatus(200);
+    }
 
     public function insertOne(ServerRequestInterface $request, ResponseInterface $response, array $args): ResponseInterface
     {
@@ -67,9 +76,9 @@ class ProductController
 
         if ($this->service->insertOne($body, $adminUserId)) {
             return $response->withStatus(200);
-        } else {
-            return $response->withStatus(404);
         }
+
+        return $response->withStatus(404);
     }
 
     public function updateOne(ServerRequestInterface $request, ResponseInterface $response, array $args): ResponseInterface
@@ -79,9 +88,9 @@ class ProductController
 
         if ($this->service->updateOne($args['id'], $body, $adminUserId)) {
             return $response->withStatus(200);
-        } else {
-            return $response->withStatus(404);
         }
+
+        return $response->withStatus(404);
     }
 
     public function deleteOne(ServerRequestInterface $request, ResponseInterface $response, array $args): ResponseInterface
@@ -90,8 +99,8 @@ class ProductController
 
         if ($this->service->deleteOne($args['id'], $adminUserId)) {
             return $response->withStatus(200);
-        } else {
-            return $response->withStatus(404);
         }
+
+        return $response->withStatus(404);
     }
 }
