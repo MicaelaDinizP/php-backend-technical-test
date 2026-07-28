@@ -232,29 +232,64 @@ class ProductService
 
     public function deleteOne($id, $adminUserId)
     {
-        $stm = $this->pdo->prepare("
-            DELETE FROM product_category WHERE product_id = {$id}
-        ");
-        if (!$stm->execute())
-            return false;
-        
-        $stm = $this->pdo->prepare("DELETE FROM product WHERE id = {$id}");
-        if (!$stm->execute())
-            return false;
+        try {
+            $this->pdo->beginTransaction();
 
-        $stm = $this->pdo->prepare("
-            INSERT INTO product_log (
-                product_id,
-                admin_user_id,
-                `action`
-            ) VALUES (
-                {$id},
-                {$adminUserId},
-                'delete'
-            )
-        ");
+            $stm = $this->pdo->prepare("
+                DELETE FROM product_category
+                WHERE product_id = :product_id
+            ");
 
-        return $stm->execute();
+            if (!$stm->execute([
+                ':product_id' => (int) $id,
+            ])) {
+                $this->pdo->rollBack();
+                return false;
+            }
+
+            $stm = $this->pdo->prepare("
+                DELETE FROM product
+                WHERE id = :id
+            ");
+
+            if (!$stm->execute([
+                ':id' => (int) $id,
+            ])) {
+                $this->pdo->rollBack();
+                return false;
+            }
+
+            $stm = $this->pdo->prepare("
+                INSERT INTO product_log (
+                    product_id,
+                    admin_user_id,
+                    `action`
+                ) VALUES (
+                    :product_id,
+                    :admin_user_id,
+                    :action
+                )
+            ");
+
+            if (!$stm->execute([
+                ':product_id' => (int) $id,
+                ':admin_user_id' => (int) $adminUserId,
+                ':action' => 'delete',
+            ])) {
+                $this->pdo->rollBack();
+                return false;
+            }
+
+            $this->pdo->commit();
+
+            return true;
+        } catch (\Throwable $e) {
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+
+            return false;
+        }
     }
 
     public function getLog($id)
