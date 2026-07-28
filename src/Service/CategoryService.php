@@ -116,12 +116,14 @@ class CategoryService
         $query = "
             SELECT company_id
             FROM admin_user
-            WHERE id = {$adminUserId}
+            WHERE id = :adminUserId
         ";
 
         $stm = $this->pdo->prepare($query);
-        
-        $stm->execute();
+
+        $stm->execute([
+            ':adminUserId' => (int) $adminUserId,
+        ]);
 
         return $stm->fetch()->company_id;
     }
