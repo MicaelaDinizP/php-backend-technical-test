@@ -1,5 +1,6 @@
 <?php
 
+use Contatoseguro\TesteBackend\Controller\CommentController;
 use Contatoseguro\TesteBackend\Controller\CategoryController;
 use Contatoseguro\TesteBackend\Controller\CompanyController;
 use Contatoseguro\TesteBackend\Controller\HomeController;
@@ -37,3 +38,31 @@ $app->group('/categories', function (RouteCollectorProxy $group) {
 });
 
 $app->get('/report', [ReportController::class, 'generate']);
+
+$app->group('/products/{productId}/comments', function (RouteCollectorProxy $group) {
+
+    /*
+     * Lista todos os comentários do produto
+     */
+    $group->get('', [CommentController::class, 'list']);
+
+    /*
+     * Cria um comentário
+     */
+    $group->post('', [CommentController::class, 'create']);
+
+    /*
+     * Responde um comentário
+     */
+    $group->post('/{commentId}/reply', [CommentController::class, 'reply']);
+
+    /*
+     * Remove um comentário
+     */
+    $group->delete('/{commentId}', [CommentController::class, 'delete']);
+
+    /*
+     * Curte um comentário
+     */
+    $group->post('/{commentId}/like', [CommentController::class, 'like']);
+});
