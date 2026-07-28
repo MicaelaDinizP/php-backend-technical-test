@@ -129,40 +129,47 @@ class ProductService
 }
 
     public function updateOne($id, $body, $adminUserId)
-    {
-        $stm = $this->pdo->prepare("
-            UPDATE product
-            SET company_id = {$body['company_id']},
-                title = '{$body['title']}',
-                price = {$body['price']},
-                active = {$body['active']}
-            WHERE id = {$id}
-        ");
-        if (!$stm->execute())
-            return false;
+{
+    $stock = $body['stock'] ?? 0;
 
-        $stm = $this->pdo->prepare("
-            UPDATE product_category
-            SET cat_id = {$body['category_id']}
-            WHERE product_id = {$id}
-        ");
-        if (!$stm->execute())
-            return false;
+    $stm = $this->pdo->prepare("
+        UPDATE product
+        SET company_id = {$body['company_id']},
+            title = '{$body['title']}',
+            price = {$body['price']},
+            active = {$body['active']},
+            stock = {$stock}
+        WHERE id = {$id}
+    ");
 
-        $stm = $this->pdo->prepare("
-            INSERT INTO product_log (
-                product_id,
-                admin_user_id,
-                `action`
-            ) VALUES (
-                {$id},
-                {$adminUserId},
-                'update'
-            )
-        ");
-
-        return $stm->execute();
+    if (!$stm->execute()) {
+        return false;
     }
+
+    $stm = $this->pdo->prepare("
+        UPDATE product_category
+        SET cat_id = {$body['category_id']}
+        WHERE product_id = {$id}
+    ");
+
+    if (!$stm->execute()) {
+        return false;
+    }
+
+    $stm = $this->pdo->prepare("
+        INSERT INTO product_log (
+            product_id,
+            admin_user_id,
+            `action`
+        ) VALUES (
+            {$id},
+            {$adminUserId},
+            'update'
+        )
+    ");
+
+    return $stm->execute();
+}
 
     public function deleteOne($id, $adminUserId)
     {
