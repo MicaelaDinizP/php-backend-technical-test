@@ -78,9 +78,9 @@ Modificações requisitadas pelo cliente em funcionalidades já existentes
 
 ### Filtros e Ordenamento
 Para a listagem de produtos:
-- [ ] Gostaria de poder filtrar os produtos ativos ou inativos;
-- [ ] Gostaria de poder filtrar os produtos por categoria;
-- [ ] Gostaria de poder ordenar os produtos por data de cadastro.
+- [x] Gostaria de poder filtrar os produtos ativos ou inativos;
+- [x] Gostaria de poder filtrar os produtos por categoria;
+- [x] Gostaria de poder ordenar os produtos por data de cadastro.
 
 ### Relatório
 - [x] O relatório não está mostrando a coluna de logs corretamente, se possível, gostaria de trazer no seguinte formato:
