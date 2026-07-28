@@ -62,12 +62,14 @@ class CategoryService
             FROM category c
             INNER JOIN product_category pc
                 ON pc.cat_id = c.id
-            WHERE pc.product_id = {$productId}
+            WHERE pc.product_id = :productId
         ";
 
         $stm = $this->pdo->prepare($query);
 
-        $stm->execute();
+        $stm->execute([
+            ':productId' => (int) $productId,
+        ]);
 
         return $stm;
     }
