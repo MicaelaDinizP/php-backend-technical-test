@@ -177,8 +177,8 @@ Para efetuar a criação do ambiente docker, partimos de algumas premissas:
 ### 1. Clone o repositório
 
 ```bash
-git clone <url-do-repositório>
-cd teste-backend
+git clone https://github.com/MicaelaDinizP/php-backend-technical-test.git
+cd php-backend-technical-test
 ```
 
 ### 2. Suba os containers
