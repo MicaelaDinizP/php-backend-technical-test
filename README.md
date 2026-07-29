@@ -137,11 +137,11 @@ Além das informações já disponíveis do produto, desejo acrescentar também 
 Quero que os usuários do sistema possam discutir sobre os produtos em uma área de comentários.
 
 Para isso, novas rotas devem ser criadas:
-- [ ] Criar um novo comentário no produto
-- [ ] Responder um comentário já realizado (todo comentário pode ser diretamente respondido)
-- [ ] Remover um comentário feito por mim
-- [ ] Curtir um comentário
-- [ ] Listar todos os comentários de um produto em um objeto com hierarquia de comentários
+- [x] Criar um novo comentário no produto
+- [x] Responder um comentário já realizado (todo comentário pode ser diretamente respondido)
+- [x] Remover um comentário feito por mim
+- [x] Curtir um comentário
+- [x] Listar todos os comentários de um produto em um objeto com hierarquia de comentários
 
 ##
 **Seu trabalho é atender às demandas solicitadas pelo cliente.**
