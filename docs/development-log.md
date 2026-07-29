@@ -725,3 +725,99 @@ Os resultados confirmaram que a funcionalidade atende aos requisitos definidos, 
 A implementação foi realizada preservando a arquitetura existente do projeto, concentrando as alterações na camada de serviço, nas rotas da API, na estrutura do banco de dados e na documentação.
 
 A utilização de uma tabela dedicada para traduções desacopla o idioma da entidade de categoria, permitindo a inclusão de novos idiomas sem necessidade de alterações estruturais futuras.
+# 28/07/2026
+
+## Tarefa
+
+Implementar área de comentários para produtos.
+
+**Issue:** #21 – Implementar sistema de comentários hierárquicos para produtos  
+**Branch:** `feature/product-comments`
+
+## Contexto
+
+O sistema passou a exigir uma área de comentários para permitir que os usuários administradores discutam informações relacionadas aos produtos cadastrados.
+
+A funcionalidade deveria permitir:
+
+- Criar um novo comentário em um produto;
+- Responder comentários existentes;
+- Remover comentários criados pelo próprio usuário;
+- Curtir comentários;
+- Listar todos os comentários de um produto em formato hierárquico.
+
+Como a funcionalidade exige persistência de comentários e curtidas, também foi necessária a criação de novas estruturas no banco de dados por meio de migrations.
+
+## Análise
+
+Inicialmente foi analisada a arquitetura utilizada pelos módulos existentes da aplicação para identificar a melhor forma de integrar a nova funcionalidade sem alterar o comportamento já implementado.
+
+Foram avaliados os seguintes componentes:
+
+- Estrutura de controllers e services;
+- Sistema de rotas da API;
+- Tabelas `product` e `admin_user`;
+- Modelo de retorno utilizado pelos controllers;
+- Estrutura de persistência existente.
+
+Durante a análise foi identificado que seria necessário representar relacionamentos entre comentários e respostas. Para isso, optou-se por utilizar uma referência para outro comentário na própria tabela (`parent_comment_id`), permitindo construir a hierarquia durante a recuperação dos dados.
+
+Também foi identificado que as curtidas deveriam possuir uma estrutura própria de persistência, permitindo controlar duplicidades e contabilizar facilmente a quantidade de curtidas por comentário.
+
+Por fim, observou-se que a quantidade de regras de negócio envolvidas na funcionalidade era superior à encontrada em outras operações da aplicação, tornando necessária uma estrutura mais adequada para validações e padronização das respostas da camada de serviço.
+
+## Implementação
+
+Foram criadas duas migrations.
+
+A primeira adiciona a tabela `comments`, responsável por armazenar os comentários associados aos produtos, contendo referência ao produto, ao usuário responsável, ao comentário pai (quando se tratar de uma resposta), data de criação e campo `deleted_at` para implementação de exclusão lógica.
+
+A segunda migration cria a tabela `comment_like`, responsável pelo registro das curtidas realizadas nos comentários. Também foi adicionada uma restrição de unicidade entre comentário e usuário, impedindo que um mesmo usuário registre mais de uma curtida para o mesmo comentário.
+
+Foi implementada a entidade `Comment`, responsável por representar os comentários na aplicação, incluindo suporte ao armazenamento das respostas e da quantidade de curtidas.
+
+Também foram criadas as classes `CommentValidator` e `ValidationResult`, centralizando as regras de validação da funcionalidade, como obrigatoriedade do comentário e limite máximo de caracteres.
+
+As regras de negócio foram concentradas no `CommentService`, responsável pela criação de comentários, criação de respostas, remoção lógica, registro de curtidas e recuperação dos comentários de um produto.
+
+Durante a recuperação dos comentários, os registros são obtidos juntamente com a quantidade de curtidas e posteriormente organizados em memória em formato de árvore, permitindo que cada comentário contenha suas respectivas respostas.
+
+Também foram implementadas validações para garantir:
+
+- existência do produto antes da criação de comentários;
+- existência do comentário antes da criação de respostas e curtidas;
+- associação entre comentário e produto durante respostas;
+- remoção apenas pelo autor do comentário;
+- impedimento de curtidas duplicadas.
+
+Diferentemente do padrão utilizado em parte das funcionalidades existentes da aplicação, foi introduzida a classe `ServiceResult`, responsável por padronizar o retorno da camada de serviço. Essa abordagem permitiu encapsular dados, mensagens, códigos HTTP e erros de validação em um único objeto, simplificando o tratamento das respostas pelo controller diante da maior quantidade de cenários previstos para a funcionalidade.
+
+Também foi criado o `CommentController`, responsável por disponibilizar os novos endpoints para criação, resposta, remoção, curtida e listagem de comentários.
+
+Por fim, as rotas da API foram atualizadas para disponibilizar a nova funcionalidade através do agrupamento `/products/{productId}/comments`.
+
+## Validação
+
+Após a implementação foram realizados testes contemplando os principais cenários da funcionalidade.
+
+Foram validados os seguintes casos:
+
+- Criação de comentários.
+- Resposta a comentários existentes.
+- Tentativa de responder comentário inexistente.
+- Tentativa de comentar em produto inexistente.
+- Remoção de comentário pelo próprio autor.
+- Tentativa de remover comentário criado por outro usuário.
+- Registro de curtidas.
+- Tentativa de registrar curtida duplicada.
+- Recuperação dos comentários em estrutura hierárquica.
+- Contagem correta das curtidas.
+- Testes unitários da entidade `Comment`.
+
+Os resultados confirmaram que a funcionalidade atende aos requisitos definidos, preservando o comportamento esperado da aplicação e garantindo a consistência das informações persistidas.
+
+## Considerações
+
+A implementação foi realizada preservando a organização da arquitetura existente da aplicação, concentrando as alterações na camada de serviço, na estrutura do banco de dados, nas rotas da API e na criação da nova entidade responsável pelos comentários.
+
+Além da implementação dos requisitos funcionais, a funcionalidade introduziu uma camada de padronização para respostas e validações, motivada pela maior quantidade de regras de negócio envolvidas nas operações de comentários. Essa estrutura contribui para reduzir a duplicação de lógica entre controllers e services e facilita a manutenção e evolução da funcionalidade sem impactar os demais módulos da aplicação.
