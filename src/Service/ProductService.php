@@ -75,7 +75,7 @@ class ProductService
         return $stm;
     }
 
-        public function insertOne($body, $adminUserId)
+       public function insertOne($body, $adminUserId)
 {
     try {
         $this->pdo->beginTransaction();
@@ -133,11 +133,15 @@ class ProductService
             INSERT INTO product_log (
                 product_id,
                 admin_user_id,
-                `action`
+                action,
+                changed_field,
+                old_value
             ) VALUES (
                 :product_id,
                 :admin_user_id,
-                :action
+                :action,
+                :changed_field,
+                :old_value
             )
         ");
 
@@ -145,6 +149,8 @@ class ProductService
             ':product_id' => $productId,
             ':admin_user_id' => (int) $adminUserId,
             ':action' => 'create',
+            ':changed_field' => null,
+            ':old_value' => null,
         ])) {
             $this->pdo->rollBack();
             return false;
@@ -167,6 +173,15 @@ class ProductService
 {
     try {
         $this->pdo->beginTransaction();
+
+        $currentProduct = $this->getCurrentProduct((int) $id);
+
+        if (!$currentProduct) {
+            $this->pdo->rollBack();
+            return false;
+        }
+
+        $priceChanged = (float) $currentProduct->price !== (float) $body['price'];
 
         $stock = (int) ($body['stock'] ?? 0);
 
@@ -207,15 +222,27 @@ class ProductService
             return false;
         }
 
+        $changedField = null;
+        $oldValue = null;
+
+        if ($priceChanged) {
+            $changedField = 'price';
+            $oldValue = (string) $currentProduct->price;
+        }
+
         $stm = $this->pdo->prepare("
             INSERT INTO product_log (
                 product_id,
                 admin_user_id,
-                `action`
+                action,
+                changed_field,
+                old_value
             ) VALUES (
                 :product_id,
                 :admin_user_id,
-                :action
+                :action,
+                :changed_field,
+                :old_value
             )
         ");
 
@@ -223,6 +250,8 @@ class ProductService
             ':product_id' => (int) $id,
             ':admin_user_id' => (int) $adminUserId,
             ':action' => 'update',
+            ':changed_field' => $changedField,
+            ':old_value' => $oldValue,
         ])) {
             $this->pdo->rollBack();
             return false;
@@ -243,66 +272,74 @@ class ProductService
 }
  
     public function deleteOne($id, $adminUserId)
-    {
-        try {
-            $this->pdo->beginTransaction();
+{
+    try {
+        $this->pdo->beginTransaction();
 
-            $stm = $this->pdo->prepare("
-                DELETE FROM product_category
-                WHERE product_id = :product_id
-            ");
+        $stm = $this->pdo->prepare("
+            DELETE FROM product_category
+            WHERE product_id = :product_id
+        ");
 
-            if (!$stm->execute([
-                ':product_id' => (int) $id,
-            ])) {
-                $this->pdo->rollBack();
-                return false;
-            }
-
-            $stm = $this->pdo->prepare("
-                DELETE FROM product
-                WHERE id = :id
-            ");
-
-            if (!$stm->execute([
-                ':id' => (int) $id,
-            ])) {
-                $this->pdo->rollBack();
-                return false;
-            }
-
-            $stm = $this->pdo->prepare("
-                INSERT INTO product_log (
-                    product_id,
-                    admin_user_id,
-                    `action`
-                ) VALUES (
-                    :product_id,
-                    :admin_user_id,
-                    :action
-                )
-            ");
-
-            if (!$stm->execute([
-                ':product_id' => (int) $id,
-                ':admin_user_id' => (int) $adminUserId,
-                ':action' => 'delete',
-            ])) {
-                $this->pdo->rollBack();
-                return false;
-            }
-
-            $this->pdo->commit();
-
-            return true;
-        } catch (\Throwable $e) {
-            if ($this->pdo->inTransaction()) {
-                $this->pdo->rollBack();
-            }
-
+        if (!$stm->execute([
+            ':product_id' => (int) $id,
+        ])) {
+            $this->pdo->rollBack();
             return false;
         }
+
+        $stm = $this->pdo->prepare("
+            DELETE FROM product
+            WHERE id = :id
+        ");
+
+        if (!$stm->execute([
+            ':id' => (int) $id,
+        ])) {
+            $this->pdo->rollBack();
+            return false;
+        }
+
+        $stm = $this->pdo->prepare("
+            INSERT INTO product_log (
+                product_id,
+                admin_user_id,
+                action,
+                changed_field,
+                old_value
+            ) VALUES (
+                :product_id,
+                :admin_user_id,
+                :action,
+                :changed_field,
+                :old_value
+            )
+        ");
+
+        if (!$stm->execute([
+            ':product_id' => (int) $id,
+            ':admin_user_id' => (int) $adminUserId,
+            ':action' => 'delete',
+            ':changed_field' => null,
+            ':old_value' => null,
+        ])) {
+            $this->pdo->rollBack();
+            return false;
+        }
+
+        $this->pdo->commit();
+
+        return true;
+
+    } catch (\Throwable $e) {
+
+        if ($this->pdo->inTransaction()) {
+            $this->pdo->rollBack();
+        }
+
+        return false;
     }
+}
 
     public function getLog($id)
     {
@@ -324,4 +361,40 @@ class ProductService
 
         return $stm;
     }
+   private function getCurrentProduct(int $id): object|false
+{
+    $stm = $this->pdo->prepare("
+        SELECT id, price
+        FROM product
+        WHERE id = :id
+    ");
+
+    $stm->execute([
+        ':id' => $id,
+    ]);
+
+    return $stm->fetch();
+}
+public function getLastPriceChange(int $productId)
+{
+    $stm = $this->pdo->prepare("
+        SELECT
+            au.name,
+            pl.timestamp
+        FROM product_log pl
+        INNER JOIN admin_user au
+            ON au.id = pl.admin_user_id
+        WHERE
+            pl.product_id = :product_id
+            AND pl.changed_field = 'price'
+        ORDER BY pl.timestamp DESC
+        LIMIT 1
+    ");
+
+    $stm->execute([
+        ':product_id' => $productId,
+    ]);
+
+    return $stm;
+}
 }
