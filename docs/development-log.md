@@ -794,6 +794,7 @@ Os resultados confirmaram que a funcionalidade atende aos requisitos definidos, 
 A implementação foi realizada preservando a arquitetura existente do projeto, concentrando as alterações na camada de serviço, nas rotas da API, na estrutura do banco de dados e na documentação.
 
 A utilização de uma tabela dedicada para traduções desacopla o idioma da entidade de categoria, permitindo a inclusão de novos idiomas sem necessidade de alterações estruturais futuras.
+
 # 28/07/2026
 
 ## Tarefa
@@ -890,3 +891,74 @@ Os resultados confirmaram que a funcionalidade atende aos requisitos definidos, 
 A implementação foi realizada preservando a organização da arquitetura existente da aplicação, concentrando as alterações na camada de serviço, na estrutura do banco de dados, nas rotas da API e na criação da nova entidade responsável pelos comentários.
 
 Além da implementação dos requisitos funcionais, a funcionalidade introduziu uma camada de padronização para respostas e validações, motivada pela maior quantidade de regras de negócio envolvidas nas operações de comentários. Essa estrutura contribui para reduzir a duplicação de lógica entre controllers e services e facilita a manutenção e evolução da funcionalidade sem impactar os demais módulos da aplicação.
+
+# 28/07/2026
+
+## Tarefa
+
+Implementar auditoria para alterações de preço dos produtos.
+
+**Issue:** #14 – Implementar auditoria de alteração de preço dos produtos  
+**Branch:** `feature/product-price-change-log`
+
+## Contexto
+
+O cliente solicitou a possibilidade de identificar qual usuário realizou a última alteração de preço do produto **iphone 8**.
+
+Durante a análise da funcionalidade existente, foi identificado que o sistema já possuía uma estrutura de logs para registrar operações realizadas sobre produtos (`create`, `update` e `delete`). Entretanto, esses registros informavam apenas o tipo da operação executada, sem identificar quais atributos haviam sido modificados durante uma atualização.
+
+Como consequência, não era possível determinar se uma operação de atualização havia alterado o preço do produto ou qualquer outro campo, impossibilitando responder ao requisito solicitado pelo cliente.
+
+## Análise
+
+Inicialmente foi analisado o funcionamento da estrutura de auditoria existente para compreender como os registros eram persistidos e quais alterações seriam necessárias para suportar um nível maior de rastreabilidade.
+
+Foram avaliados os seguintes componentes:
+
+- Estrutura da tabela `product_log`;
+- Fluxo de atualização de produtos no `ProductService`;
+- Processo de gravação dos logs de auditoria;
+- Estrutura das rotas da API relacionadas aos produtos.
+
+Durante a análise foi identificado que toda atualização de produto gerava apenas um registro contendo o identificador do produto, o usuário responsável e o tipo da operação executada, sem armazenar informações sobre qual atributo havia sido alterado.
+
+Considerando que futuras demandas poderiam exigir auditoria de outros atributos além do preço, optou-se por evoluir a estrutura de persistência em vez de implementar uma solução específica apenas para este requisito.
+
+## Implementação
+
+Foi criada uma migration responsável por adicionar os campos `changed_field` e `old_value` à tabela `product_log`, permitindo registrar qual atributo foi alterado e qual era seu valor antes da atualização.
+
+Na camada de serviço foi implementado um método responsável por recuperar o estado atual do produto antes da execução da atualização, possibilitando comparar o preço persistido com o novo valor recebido na requisição.
+
+Durante o processo de atualização, passou a ser realizada uma verificação específica para identificar alterações no atributo `price`. Quando uma alteração é detectada, o log registra o campo alterado e o valor anterior do produto. Caso o preço permaneça inalterado, o comportamento existente da auditoria é preservado.
+
+Também foram atualizados os processos de criação e remoção de produtos para manter compatibilidade com a nova estrutura da tabela de auditoria.
+
+Foi implementado um novo método no `ProductService` responsável por recuperar o último registro de alteração de preço de um produto.
+
+Na camada de controller foi criado um novo endpoint responsável por disponibilizar essa informação aos consumidores da API através da rota:
+
+`GET /products/{id}/last-price-change`
+
+A nova rota foi agrupada juntamente com as demais rotas de produtos, preservando a organização da API existente.
+
+## Validação
+
+Após a implementação foram realizados testes contemplando os principais cenários da funcionalidade.
+
+Foram validados os seguintes casos:
+
+- Atualização do preço de um produto.
+- Atualização de outros atributos sem alteração de preço.
+- Registro da auditoria apenas quando ocorre alteração no preço.
+- Recuperação correta do último usuário que alterou o preço de um produto.
+- Execução e reversão da migration.
+- Compatibilidade da nova estrutura com os registros existentes de criação e remoção de produtos.
+
+Os resultados confirmaram que a funcionalidade atende ao requisito solicitado pelo cliente, permitindo identificar corretamente o último usuário responsável por alterações de preço sem impactar o funcionamento das demais funcionalidades de auditoria.
+
+## Considerações
+
+A implementação foi realizada preservando a arquitetura existente da aplicação, concentrando as alterações na estrutura de persistência, na camada de serviço, na camada de controller e na configuração das rotas da API.
+
+Além de atender ao requisito funcional, a solução evolui o mecanismo de auditoria existente, tornando a estrutura preparada para futuras necessidades de rastreamento de alterações em outros atributos dos produtos, reduzindo a necessidade de novas modificações estruturais na tabela de logs.
