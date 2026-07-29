@@ -231,7 +231,7 @@ Além dos requisitos propostos pelo desafio, foram identificadas oportunidades d
 
 ## Sobre o Development Log
 
-Todo o processo de desenvolvimento foi registrado em um **Development Log**, contendo a documentação cronológica das atividades realizadas.
+Todo o processo de desenvolvimento foi registrado em um **Development Log** (`docs/development-log.md`), contendo a documentação cronológica das atividades realizadas.
 
 Nesse documento estão registrados, para cada tarefa:
 
