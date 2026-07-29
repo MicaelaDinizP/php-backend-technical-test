@@ -566,6 +566,75 @@ Os resultados retornados em todos os cenários foram comparados com os dados cad
 
 A solução preservou a estrutura existente da API, concentrando as alterações na construção da consulta responsável pela listagem dos produtos.
 
+# 28/07/2026
+
+## Tarefa
+
+Corrigir vulnerabilidades de SQL Injection na camada de persistência.
+
+**Issue:** #22 – Remover vulnerabilidades de SQL Injection na camada de persistência e acrescentar controle de transação  
+**Branch:** `refactor/remove-sql-injection`
+
+## Contexto
+
+Durante a análise da camada de persistência da aplicação foram identificadas consultas SQL construídas por meio da interpolação direta de variáveis, permitindo que valores externos fossem inseridos diretamente nas instruções SQL.
+
+Esse padrão representava um risco de SQL Injection e dificultava a manutenção do código, uma vez que o tratamento dos parâmetros não seguia um padrão consistente entre os serviços.
+
+Além da substituição das consultas vulneráveis, foi identificada a necessidade de garantir a atomicidade das operações compostas de escrita, evitando que alterações parciais fossem persistidas caso alguma etapa da operação falhasse.
+
+## Análise
+
+Inicialmente foi realizado um levantamento de todas as consultas SQL presentes nos serviços da aplicação.
+
+Foram analisados os seguintes componentes:
+
+- `ProductService`;
+- `CategoryService`;
+- `CompanyService`.
+
+Durante a análise foram identificadas consultas utilizando interpolação direta de parâmetros em operações de consulta, inserção, atualização e remoção de registros.
+
+Também foi identificado que as operações de criação, atualização e exclusão de produtos executavam múltiplas instruções SQL de forma sequencial, sem utilização de transações, permitindo que inconsistências fossem persistidas em caso de falha durante a execução.
+
+## Implementação
+
+Todas as consultas vulneráveis foram refatoradas para utilizar prepared statements do PDO com parâmetros nomeados, eliminando a interpolação direta de valores externos nas instruções SQL.
+
+Foi padronizado o envio de parâmetros utilizando o método `execute($params)`, mantendo consistência com o padrão já adotado no projeto.
+
+Também foi realizada a padronização da tipagem dos parâmetros antes da execução das consultas, utilizando conversões explícitas para os tipos esperados.
+
+Nas operações de inserção, atualização e exclusão de produtos foram implementadas transações utilizando `beginTransaction`, `commit` e `rollBack`, garantindo que todas as alterações sejam persistidas apenas quando todas as operações forem concluídas com sucesso.
+
+Em caso de falha durante qualquer etapa da operação, a transação é revertida automaticamente, preservando a consistência dos dados.
+
+## Validação
+
+Após a implementação foram realizadas validações das operações responsáveis pela persistência dos dados.
+
+Foram validados os seguintes cenários:
+
+- Consulta de produtos.
+- Consulta de categorias.
+- Consulta de empresas.
+- Cadastro de produtos.
+- Atualização de produtos.
+- Exclusão de produtos.
+- Cadastro de categorias.
+- Atualização de categorias.
+- Exclusão de categorias.
+- Registro das operações no histórico de produtos.
+- Execução das operações transacionais em cenários de sucesso.
+- Rollback das operações em caso de falha durante transações.
+
+As consultas continuaram retornando os mesmos resultados esperados após a substituição por prepared statements, enquanto as operações compostas passaram a garantir a integridade dos dados por meio do controle transacional.
+
+## Considerações
+
+A implementação concentrou as alterações exclusivamente na camada de persistência, preservando o comportamento da aplicação e eliminando os pontos identificados de SQL Injection.
+
+Além do fortalecimento da segurança das consultas SQL, a adoção de transações nas operações compostas aumentou a confiabilidade da persistência dos dados, garantindo consistência mesmo diante de falhas durante a execução.
 # 27/07/2026
 
 ## Tarefa
