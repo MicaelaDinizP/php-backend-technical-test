@@ -30,46 +30,65 @@ class ReportController
             'Valor do Produto',
             'Categorias do Produto',
             'Data de Criação',
-            'Logs de Alterações'
+            'Logs de Alterações',
+            'Última alteração de preço'
         ];
 
         $stm = $this->productService->getAll($adminUserId);
         $products = $stm->fetchAll();
 
         foreach ($products as $i => $product) {
+
             $stm = $this->companyService->getNameById($product->company_id);
             $companyName = $stm->fetch()->name;
 
             $stm = $this->productService->getLog($product->id);
             $productLogs = $stm->fetchAll();
 
+            $stm = $this->productService->getLastPriceChange($product->id);
+            $lastPriceChange = $stm->fetch();
+
+            $lastPriceChangeText = '-';
+
+            if ($lastPriceChange) {
+                $date = new \DateTime($lastPriceChange->timestamp);
+
+                $lastPriceChangeText = sprintf(
+                    '%s (%s)',
+                    $lastPriceChange->name,
+                    $date->format('d/m/Y H:i:s')
+                );
+            }
+
             $logs = [];
 
-foreach ($productLogs as $log) {
-    $action = match ($log->action) {
-        'create' => 'Criação',
-        'update' => 'Atualização',
-        'delete' => 'Remoção',
-        default => $log->action,
-    };
+            foreach ($productLogs as $log) {
+                $action = match ($log->action) {
+                    'create' => 'Criação',
+                    'update' => 'Atualização',
+                    'delete' => 'Remoção',
+                    default => $log->action,
+                };
 
-    $date = new \DateTime($log->timestamp);
+                $date = new \DateTime($log->timestamp);
 
-    $logs[] = sprintf(
-        '(%s, %s, %s)',
-        $log->name,
-        $action,
-        $date->format('d/m/Y H:i:s')
-    );
-}
+                $logs[] = sprintf(
+                    '(%s, %s, %s)',
+                    $log->name,
+                    $action,
+                    $date->format('d/m/Y H:i:s')
+                );
+            }
+
             $data[$i + 1][] = $product->id;
             $data[$i + 1][] = $companyName;
             $data[$i + 1][] = $product->title;
             $data[$i + 1][] = $product->price;
             $data[$i + 1][] = $product->category;
             $data[$i + 1][] = (new \DateTime($product->created_at))
-    ->format('d/m/Y H:i:s');
+                ->format('d/m/Y H:i:s');
             $data[$i + 1][] = implode(', ', $logs);
+            $data[$i + 1][] = $lastPriceChangeText;
         }
 
         $report = "<table style='font-size: 10px;'>";
