@@ -103,4 +103,25 @@ class ProductController
 
         return $response->withStatus(404);
     }
+
+    public function getLastPriceChange(
+    ServerRequestInterface $request,
+    ResponseInterface $response,
+    array $args
+): ResponseInterface {
+
+    $result = $this->service
+        ->getLastPriceChange((int) $args['id'])
+        ->fetch();
+
+    if (!$result) {
+        return $response->withStatus(404);
+    }
+
+    $response->getBody()->write(json_encode($result));
+
+    return $response
+        ->withHeader('Content-Type', 'application/json')
+        ->withStatus(200);
+}
 }
